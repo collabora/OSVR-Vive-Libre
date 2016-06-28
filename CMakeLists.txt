@@ -1,0 +1,60 @@
+#
+# Libre HTC Vive plugin for OSVR
+#
+cmake_minimum_required(VERSION 3.1.0)
+project(com_osvr_Vive_Libre)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(CopyImportedTarget)
+include(GNUInstallDirs)
+
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(osvr REQUIRED)
+find_package(JsonCpp REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system iostreams filesystem)
+find_package(Eigen3 REQUIRED)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
+
+include_directories(/usr/include/hidapi/)
+
+
+# Build the plugin
+
+osvr_convert_json(org_osvr_Vive_Libre_json
+    org_osvr_Vive_Libre.json
+    "${CMAKE_CURRENT_BINARY_DIR}/org_osvr_Vive_Libre_json.h")
+
+osvr_convert_json(com_osvr_Vive_json
+    com_osvr_Vive.json
+    "${CMAKE_CURRENT_BINARY_DIR}/com_osvr_Vive_json.h")
+
+set(SOURCES
+    org_osvr_Vive_Libre.cpp
+    vive.c
+    openhmd.c
+    vive.h
+    magic.h
+    "${CMAKE_CURRENT_BINARY_DIR}/com_osvr_Vive_json.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/org_osvr_Vive_Libre_json.h")
+
+osvr_add_plugin(org_osvr_Vive_Libre ${SOURCES})
+
+target_include_directories(org_osvr_Vive_Libre
+    PRIVATE
+    ${EIGEN3_INCLUDE_DIR})
+
+
+target_link_libraries(org_osvr_Vive_Libre hidapi-libusb)
+
+# Install files for the plugin.
+install(FILES
+    osvr_server_config.vive_libre.sample.json
+    DESTINATION .)
+
+# compile test to indicate linker errors
+add_executable(testbin test.cpp  ${SOURCES})
+target_link_libraries(testbin osvrPluginKit osvrCommon osvrUtil hidapi-libusb)
