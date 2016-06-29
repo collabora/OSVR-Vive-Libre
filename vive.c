@@ -181,6 +181,18 @@ static ohmd_device* open_device(ohmd_driver* driver, ohmd_device_desc* desc)
 		goto cleanup;
 	}
 
+
+    priv->lighthouse_sensor_handle = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 1, 2, idx);
+    if(!priv->lighthouse_sensor_handle)
+        goto cleanup;
+
+    if(hid_set_nonblocking(priv->lighthouse_sensor_handle, 1) == -1){
+        ohmd_set_error(driver->ctx, "failed to set non-blocking on lighthouse sensor");
+        goto cleanup;
+    }
+
+
+
     priv->watchman_dongle_handle = open_device_idx(VALVE_ID, VIVE_WATCHMAN_DONGLE, 1, 2, idx);
 
     // Open the controller dongle

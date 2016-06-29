@@ -152,6 +152,35 @@ void print_watchman_packet(vive_watchman_packet * pkt) {
     printf("type %d %d buttons: %d\n", pkt->type1, pkt->type2, pkt->pressed_buttons);
 }
 
+bool vive_decode_lighthouse_packet(vive_lighthouse_packet* pkt, const unsigned char* buffer, int size)
+{
+    if(size != 64){
+        LOGE("invalid vive sensor packet size (expected 52 but got %d)", size);
+        return false;
+    }
+
+    pkt->report_id = read8(&buffer);
+
+    for(int j = 0; j < 9; j++){
+        pkt->samples[j].sensor_id = read8(&buffer);
+        pkt->samples[j].length = read16(&buffer);
+        pkt->samples[j].time = read32(&buffer);
+    }
+
+    return true;
+}
+
+void print_lighthouse_packet(vive_lighthouse_packet* pkt) {
+    printf("vive lighthouse sample:\n");
+    printf("  report_id: %u\n", pkt->report_id);
+    for(int i = 0; i < 9; i++){
+        printf("     sensor_id[%d]: %u\n", i, pkt->samples[i].sensor_id);
+        printf("      length[%d]: %d\n", i, pkt->samples[i].length);
+        printf("      time[%d]: %zd\n", i, pkt->samples[i].time);
+        printf("\n");
+    }
+}
+
 class TrackerDevice {
   public:
     TrackerDevice(OSVR_PluginRegContext ctx) {
@@ -247,8 +276,24 @@ class TrackerDevice {
         }
         */
 
+
+        unsigned char lighthouse_buffer[FEATURE_BUFFER_SIZE];
+        while((size = hid_read(priv->lighthouse_sensor_handle, lighthouse_buffer, FEATURE_BUFFER_SIZE)) > 0){
+            if(lighthouse_buffer[0] == 37){
+                vive_lighthouse_packet pkt;
+                vive_decode_lighthouse_packet(&pkt, lighthouse_buffer, size);
+                print_lighthouse_packet(&pkt);
+            }else{
+                printf("unhandled message type: %u\n", lighthouse_buffer[0]);
+            }
+        }
+
+        if(size < 0){
+            LOGE("error reading from device");
+        }
+
 /*
-*/
+
         unsigned char watchman_buffer[FEATURE_BUFFER_SIZE];
         while((size = hid_read(priv->watchman_dongle_handle, watchman_buffer, FEATURE_BUFFER_SIZE)) > 0){
             if(watchman_buffer[0] == 35){
@@ -266,7 +311,7 @@ class TrackerDevice {
         if(size < 0){
             LOGE("error reading from device");
         }
-
+*/
 
         return OSVR_RETURN_SUCCESS;
     }

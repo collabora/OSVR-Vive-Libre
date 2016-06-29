@@ -23,10 +23,23 @@ typedef struct
 
 typedef struct
 {
-	uint8_t report_id;
-	vive_sensor_sample samples[3];
+    uint8_t report_id;
+    vive_sensor_sample samples[3];
 } vive_imu_packet;
 
+
+typedef struct
+{
+    uint8_t sensor_id;
+    int16_t length;
+    int32_t	time;
+} vive_lighthouse_sample;
+
+typedef struct
+{
+    uint8_t report_id;
+    vive_lighthouse_sample samples[9];
+} vive_lighthouse_packet;
 
 typedef struct
 {
@@ -44,6 +57,7 @@ typedef struct {
     hid_device* hmd_handle;
     hid_device* imu_handle;
     hid_device* watchman_dongle_handle;
+    hid_device* lighthouse_sensor_handle;
 } vive_priv;
 
 bool vive_decode_imu_packet(vive_imu_packet* pkt, const unsigned char* buffer, int size);
