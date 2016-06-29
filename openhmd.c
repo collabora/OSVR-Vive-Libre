@@ -321,37 +321,3 @@ void* ohmd_allocfn(ohmd_context* ctx, const char* e_msg, size_t size)
 		ohmd_set_error(ctx, "%s", e_msg);
 	return ret;
 }
-
-void ohmd_set_default_device_properties(ohmd_device_properties* props)
-{
-	props->ipd = 0.061f;
-	props->znear = 0.1f;
-	props->zfar = 1000.0f;
-}
-/*
-void ohmd_calc_default_proj_matrices(ohmd_device_properties* props)
-{
-	mat4x4f proj_base; // base projection matrix
-
-	// Calculate where the lens is on each screen,
-	// and with the given value offset the projection matrix.
-	float screen_center = props->hsize / 4.0f;
-	float lens_shift = screen_center - props->lens_sep / 2.0f;
-	float proj_offset = 4.0f * lens_shift / props->hsize;
-
-	// Setup the base projection matrix. Each eye mostly have the
-	// same projection matrix with the exception of the offset.
-	omat4x4f_init_perspective(&proj_base, props->fov, props->ratio, props->znear, props->zfar);
-
-	// Setup the two adjusted projection matricies. Each is setup to deal
-	// with the fact that the lens is not in the center of the screen.
-	// These matrices only change of the hardware changes, so static.
-	mat4x4f translate;
-
-	omat4x4f_init_translate(&translate, proj_offset, 0, 0);
-	omat4x4f_mult(&translate, &proj_base, &props->proj_left);
-
-	omat4x4f_init_translate(&translate, -proj_offset, 0, 0);
-	omat4x4f_mult(&translate, &proj_base, &props->proj_right);
-}
-*/

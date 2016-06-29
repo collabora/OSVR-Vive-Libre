@@ -23,95 +23,6 @@
 
 #include "vive.h"
 
-inline static uint8_t read8(const unsigned char** buffer)
-{
-    return *(*buffer++);
-}
-
-inline static int16_t read16(const unsigned char** buffer)
-{
-    int16_t ret = **buffer | (*(*buffer + 1) << 8);
-    *buffer += 2;
-    return ret;
-}
-
-inline static int32_t read32(const unsigned char** buffer)
-{
-    int32_t ret = **buffer | (*(*buffer + 1) << 8) | (*(*buffer + 1) << 16) | (*(*buffer + 1) << 24);
-    *buffer += 4;
-    return ret;
-}
-
-
-bool vive_decode_sensor_packet(vive_sensor_packet* pkt, const unsigned char* buffer, int size)
-{
-    if(size != 52){
-        LOGE("invalid vive sensor packet size (expected 52 but got %d)", size);
-        return false;
-    }
-
-    pkt->report_id = read8(&buffer);
-
-    for(int j = 0; j < 3; j++){
-        // acceleration
-        for(int i = 0; i < 3; i++){
-            pkt->samples[j].acc[i] = read16(&buffer);
-        }
-
-        // rotation
-        for(int i = 0; i < 3; i++){
-            pkt->samples[j].rot[i] = read16(&buffer);
-        }
-
-        pkt->samples[j].time_ticks = read32(&buffer);
-        pkt->samples[j].seq = read8(&buffer);
-    }
-
-    return true;
-}
-
-static void update_device(ohmd_device* device)
-{
-	vive_priv* priv = (vive_priv*)device;
-
-	int size = 0;
-	unsigned char buffer[FEATURE_BUFFER_SIZE];
-	
-	// lighthouse update
-    printf("============\n");
-	while((size = hid_read(priv->imu_handle, buffer, FEATURE_BUFFER_SIZE)) > 0){
-		if(buffer[0] == VIVE_IRQ_SENSORS){
-			vive_sensor_packet pkt;
-			vive_decode_sensor_packet(&pkt, buffer, size);
-
-			printf("vive sensor sample:\n");
-			printf("  report_id: %u\n", pkt.report_id);
-            for(int i = 0; i < 3; i++){
-                //int i = 0;
-                printf("    sample[%d]:\n", i);
-
-				for(int j = 0; j < 3; j++){
-					printf("      acc[%d]: %d\n", j, pkt.samples[i].acc[j]);
-				}
-				
-				for(int j = 0; j < 3; j++){
-					printf("      rot[%d]: %d\n", j, pkt.samples[i].rot[j]);
-				}
-
-				printf("time_ticks: %d\n", pkt.samples[i].time_ticks);
-				printf("seq: %u\n", pkt.samples[i].seq);
-				printf("\n");
-			}
-		}else{
-			LOGE("unknown message type: %u", buffer[0]);
-		}
-	}
-
-	if(size < 0){
-		LOGE("error reading from device");
-	}
-}
-
 static int getf(ohmd_device* device, ohmd_float_value type, float* out)
 {
 	vive_priv* priv = (vive_priv*)device;
@@ -191,7 +102,7 @@ static void dumpbin(const char* label, const unsigned char* data, int length)
 	printf("%s:\n", label);
 	for(int i = 0; i < length; i++){
 		printf("%02x ", data[i]);
-		if((i % 16) == 15)
+        if((i % 16) == 15)
 			printf("\n");
 	}
 	printf("\n");
@@ -206,13 +117,17 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
 	int iface_cur = 0;
 	hid_device* ret = NULL;
 
+    printf("Opening Manufacturer %04x Product %04x\n", manufacturer, product);
+
 	while (cur_dev) {
-		printf("%04x:%04x %s\n", manufacturer, product, cur_dev->path);
+        printf("Path %s", cur_dev->path);
 
 		if(idx == device_index && iface == iface_cur){
-			ret = hid_open_path(cur_dev->path);
-			printf("opening\n");
-		}
+            ret = hid_open_path(cur_dev->path);
+            printf(" [open]\n");
+        } else {
+            printf(" [skip]\n");
+        }
 
 		cur_dev = cur_dev->next;
 
@@ -225,6 +140,8 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
 	}
 
 	hid_free_enumeration(devs);
+
+    printf("Returning last opened device.\n");
 
 	return ret;
 }
@@ -264,6 +181,26 @@ static ohmd_device* open_device(ohmd_driver* driver, ohmd_device_desc* desc)
 		goto cleanup;
 	}
 
+    priv->watchman_dongle_handle = open_device_idx(VALVE_ID, VIVE_WATCHMAN_DONGLE, 1, 2, idx);
+
+    // Open the controller dongle
+
+    if(!priv->watchman_dongle_handle) {
+        printf("failed to open dongle!\n");
+        ohmd_set_error(driver->ctx, "failed to open watchman dongle");
+        goto cleanup;
+
+    } else {
+        printf("opened watchman dongle! :)\n");
+    }
+
+    if(hid_set_nonblocking(priv->watchman_dongle_handle, 1) == -1){
+        ohmd_set_error(driver->ctx, "failed to set non-blocking on device");
+        goto cleanup;
+    } else {
+        printf("set watchman to non blocking.\n");
+    }
+
 	dump_info_string(hid_get_manufacturer_string, "manufacturer", priv->hmd_handle);
 	dump_info_string(hid_get_product_string , "product", priv->hmd_handle);
 	dump_info_string(hid_get_serial_number_string, "serial number", priv->hmd_handle);
@@ -274,26 +211,9 @@ static ohmd_device* open_device(ohmd_driver* driver, ohmd_device_desc* desc)
 	
 	// enable lighthouse
 	//hret = hid_send_feature_report(priv->hmd_handle, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
-	//printf("enable lighthouse magic: %d\n", hret);
-	
-	// Set default device properties
-	ohmd_set_default_device_properties(&priv->base.properties);
-
-	// Set device properties
-	priv->base.properties.hsize = 0.149760f;
-	priv->base.properties.vsize = 0.093600f;
-	priv->base.properties.hres = 2160;
-	priv->base.properties.vres = 1200;
-	priv->base.properties.lens_sep = 0.063500;
-	priv->base.properties.lens_vpos = 0.046800;
-	priv->base.properties.fov = DEG_TO_RAD(125.5144f);
-	priv->base.properties.ratio = (2160.0f / 1200.0f) / 2.0f;
-
-	// calculate projection eye projection matrices from the device properties
-    // ohmd_calc_default_proj_matrices(&priv->base.properties);
+    //printf("enable lighthouse magic: %d\n", hret);
 
 	// set up device callbacks
-	priv->base.update = update_device;
 	priv->base.close = close_device;
 	priv->base.getf = getf;
 	

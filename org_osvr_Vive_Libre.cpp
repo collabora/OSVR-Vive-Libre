@@ -74,7 +74,7 @@ inline static int32_t read32(const unsigned char** buffer)
     return ret;
 }
 
-bool vive_decode_sensor_packet(vive_sensor_packet* pkt, const unsigned char* buffer, int size)
+bool vive_decode_imu_packet(vive_imu_packet* pkt, const unsigned char* buffer, int size)
 {
     if(size != 52){
         LOGE("invalid vive sensor packet size (expected 52 but got %d)", size);
@@ -102,6 +102,55 @@ bool vive_decode_sensor_packet(vive_sensor_packet* pkt, const unsigned char* buf
 }
 
 
+void print_imu_packet(vive_imu_packet* pkt) {
+    printf("vive imu sample:\n");
+    printf("  report_id: %u\n", pkt->report_id);
+    for(int i = 0; i < 3; i++){
+        printf("    sample[%d]:\n", i);
+
+        for(int j = 0; j < 3; j++){
+            printf("      acc[%d]: %d\n", j, pkt->samples[i].acc[j]);
+        }
+
+        for(int j = 0; j < 3; j++){
+            printf("      rot[%d]: %d\n", j, pkt->samples[i].rot[j]);
+        }
+
+        printf("time_ticks: %d\n", pkt->samples[i].time_ticks);
+        printf("seq: %u\n", pkt->samples[i].seq);
+        printf("\n");
+    }
+}
+
+bool vive_decode_watchman_packet(vive_watchman_packet* pkt, const unsigned char* buffer, int size)
+{
+    if(size != 30){
+        LOGE("invalid vive sensor packet size (expected 30 but got %d)", size);
+        return false;
+    }
+
+    pkt->report_id = buffer[0];
+    pkt->time1 = buffer[1];
+    pkt->type1 = buffer[2];
+    pkt->time2 = buffer[3];
+    pkt->type2 = buffer[4];
+    pkt->pressed_buttons = buffer[5];
+
+    return true;
+}
+
+void print_watchman_packet(vive_watchman_packet * pkt) {
+    /*
+    printf("vive watchman sample:\n");
+    printf("  report_id: %u\n", pkt->report_id);
+    printf("  time1: %u\n", pkt->time1);
+    printf("  type1: %u\n", pkt->type1);
+    printf("  time2: %u\n", pkt->time2);
+    printf("  type2: %d\n", pkt->type2);
+    */
+
+    printf("type %d %d buttons: %d\n", pkt->type1, pkt->type2, pkt->pressed_buttons);
+}
 
 class TrackerDevice {
   public:
@@ -152,24 +201,6 @@ class TrackerDevice {
             printf("failed to open device: %s\n", ohmd_ctx_get_error(ctx_openhmd));
             return;
         }
-
-        // Print hardware information for the opened device
-        int ivals[2];
-        ohmd_device_geti(hmd, OHMD_SCREEN_HORIZONTAL_RESOLUTION, ivals);
-        ohmd_device_geti(hmd, OHMD_SCREEN_VERTICAL_RESOLUTION, ivals + 1);
-        printf("resolution:         %i x %i\n", ivals[0], ivals[1]);
-
-        print_infof(hmd, "hsize:",            1, OHMD_SCREEN_HORIZONTAL_SIZE);
-        print_infof(hmd, "vsize:",            1, OHMD_SCREEN_VERTICAL_SIZE);
-        print_infof(hmd, "lens separation:",  1, OHMD_LENS_HORIZONTAL_SEPARATION);
-        print_infof(hmd, "lens vcenter:",     1, OHMD_LENS_VERTICAL_POSITION);
-        print_infof(hmd, "left eye fov:",     1, OHMD_LEFT_EYE_FOV);
-        print_infof(hmd, "right eye fov:",    1, OHMD_RIGHT_EYE_FOV);
-        print_infof(hmd, "left eye aspect:",  1, OHMD_LEFT_EYE_ASPECT_RATIO);
-        print_infof(hmd, "right eye aspect:", 1, OHMD_RIGHT_EYE_ASPECT_RATIO);
-        print_infof(hmd, "distortion k:",     6, OHMD_DISTORTION_K);
-
-        printf("\n");
     }
 
     #define FEATURE_BUFFER_SIZE 256
@@ -193,37 +224,42 @@ class TrackerDevice {
         pose.translation.data[2] = std::sin(t + 0.25) * 0.25;
         osvrDeviceTrackerSendPose(m_dev, m_tracker, &pose, 0);
 
-
         vive_priv* priv = (vive_priv*)ctx_openhmd->active_devices[0];
 
         int size = 0;
-        unsigned char buffer[FEATURE_BUFFER_SIZE];
 
+        /*
         // lighthouse update
+        unsigned char buffer[FEATURE_BUFFER_SIZE];
         while((size = hid_read(priv->imu_handle, buffer, FEATURE_BUFFER_SIZE)) > 0){
             if(buffer[0] == VIVE_IRQ_SENSORS){
-                vive_sensor_packet pkt;
-                vive_decode_sensor_packet(&pkt, buffer, size);
-
-                printf("vive sensor sample:\n");
-                printf("  report_id: %u\n", pkt.report_id);
-                for(int i = 0; i < 3; i++){
-                    printf("    sample[%d]:\n", i);
-
-                    for(int j = 0; j < 3; j++){
-                        printf("      acc[%d]: %d\n", j, pkt.samples[i].acc[j]);
-                    }
-
-                    for(int j = 0; j < 3; j++){
-                        printf("      rot[%d]: %d\n", j, pkt.samples[i].rot[j]);
-                    }
-
-                    printf("time_ticks: %d\n", pkt.samples[i].time_ticks);
-                    printf("seq: %u\n", pkt.samples[i].seq);
-                    printf("\n");
-                }
+                vive_imu_packet pkt;
+                vive_decode_imu_packet(&pkt, buffer, size);
+                print_imu_packet(&pkt);
             }else{
-                LOGE("unknown message type: %u", buffer[0]);
+                printf("unhandled message type: %u\n", buffer[0]);
+                //LOGE("unknown message type: %u", buffer[0]);
+            }
+        }
+
+        if(size < 0){
+            LOGE("error reading from device");
+        }
+        */
+
+/*
+*/
+        unsigned char watchman_buffer[FEATURE_BUFFER_SIZE];
+        while((size = hid_read(priv->watchman_dongle_handle, watchman_buffer, FEATURE_BUFFER_SIZE)) > 0){
+            if(watchman_buffer[0] == 35){
+                vive_watchman_packet pkt;
+                vive_decode_watchman_packet(&pkt, watchman_buffer, size);
+                print_watchman_packet(&pkt);
+            }else if (watchman_buffer[0] == 36) {
+                // todo handle paket 36
+            }else{
+                printf("unhandled message type: %u\n", watchman_buffer[0]);
+                //LOGE("unknown message type: %u", buffer[0]);
             }
         }
 
@@ -231,7 +267,6 @@ class TrackerDevice {
             LOGE("error reading from device");
         }
 
-        //ohmd_ctx_update(ctx_openhmd);
 
         return OSVR_RETURN_SUCCESS;
     }
