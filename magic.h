@@ -25,3 +25,13 @@ static const unsigned char vive_magic_power_off2[64] = {
 static const unsigned char vive_magic_enable_lighthouse[5] = {
 	0x04
 };
+
+
+static const unsigned char vive_controller_haptic_pulse[10] = {
+    255, 0x8f, 7, 0, 0, 0, 0, 0, 0, 0
+};
+
+
+static const unsigned char vive_controller_power_off[7] = {
+    255, 0x9f, 4, 'o', 'f', 'f', '!'
+};

@@ -51,6 +51,13 @@ typedef struct
     uint8_t pressed_buttons;
 } vive_watchman_packet;
 
+typedef struct
+{
+    uint8_t report_id;
+    uint8_t command;
+    uint8_t length;
+} vive_controller_command_packet;
+
 typedef struct {
     ohmd_device base;
 
