@@ -106,7 +106,7 @@ bool vive_decode_imu_packet(vive_imu_packet* pkt, const unsigned char* buffer, i
 
 
 void print_imu_packet(vive_imu_packet* pkt) {
-    printf("vive imu sample:\n");
+    printf("== imu sample ==\n");
     printf("  report_id: %u\n", pkt->report_id);
     for(int i = 0; i < 3; i++){
         printf("    sample[%d]:\n", i);
@@ -193,7 +193,7 @@ bool vive_decode_controller_lighthouse_packet(vive_controller_lighthouse_packet*
 }
 
 void print_controller_lighthouse_packet(vive_controller_lighthouse_packet* pkt) {
-    printf("vive controller lighthouse sample:\n");
+    printf("== controller light sample ==\n");
     printf("  report_id: %u\n", pkt->report_id);
     for(int i = 0; i < 7; i++){
         printf("     sensor_id[%d]: %u\n", i, pkt->samples[i].sensor_id);
@@ -205,7 +205,7 @@ void print_controller_lighthouse_packet(vive_controller_lighthouse_packet* pkt) 
 }
 
 void print_lighthouse_packet(vive_lighthouse_packet* pkt) {
-    printf("vive lighthouse sample:\n");
+    printf("== hmd light sample ==\n");
     printf("  report_id: %u\n", pkt->report_id);
     for(int i = 0; i < 9; i++){
         printf("     sensor_id[%d]: %u\n", i, pkt->samples[i].sensor_id);
@@ -267,38 +267,19 @@ class TrackerDevice {
     }
 
     #define FEATURE_BUFFER_SIZE 256
-
-    OSVR_ReturnCode update() {
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(
-            5)); // Simulate waiting a quarter second for data.
-
-        OSVR_TimeValue now;
-        osvrTimeValueGetNow(&now);
-        double t = 5.0 * ((double)now.seconds + ((double)now.microseconds / 1000000.0));
-
-        /// Report the identity pose for sensor 0
-        OSVR_PoseState pose;
-        osvrPose3SetIdentity(&pose);
-        pose.translation.data[0] = std::sin(t) * 0.25;
-        pose.translation.data[1] = std::cos(t + 0.5) * 0.25;
-        pose.translation.data[2] = std::sin(t + 0.25) * 0.25;
-        osvrDeviceTrackerSendPose(m_dev, m_tracker, &pose, 0);
-
-        vive_priv* priv = (vive_priv*)ctx_openhmd->active_devices[0];
-
+    void print_watchman_sensors() {
         int size = 0;
-
-/*
-        // lighthouse update
-        unsigned char buffer[FEATURE_BUFFER_SIZE];
-        while((size = hid_read(priv->imu_handle, buffer, FEATURE_BUFFER_SIZE)) > 0){
-            if(buffer[0] == VIVE_IRQ_SENSORS){
-                vive_imu_packet pkt;
-                vive_decode_imu_packet(&pkt, buffer, size);
-                print_imu_packet(&pkt);
+        vive_priv* priv = (vive_priv*)ctx_openhmd->active_devices[0];
+        unsigned char watchman_buffer[FEATURE_BUFFER_SIZE];
+        while((size = hid_read(priv->watchman_dongle_handle, watchman_buffer, FEATURE_BUFFER_SIZE)) > 0){
+            if(watchman_buffer[0] == 35){
+                vive_watchman_packet pkt;
+                vive_decode_watchman_packet(&pkt, watchman_buffer, size);
+                print_watchman_packet(&pkt);
+            }else if (watchman_buffer[0] == 36) {
+                // todo handle paket 36
             }else{
-                printf("unhandled message type: %u\n", buffer[0]);
+                printf("unhandled message type: %u\n", watchman_buffer[0]);
                 //LOGE("unknown message type: %u", buffer[0]);
             }
         }
@@ -306,9 +287,11 @@ class TrackerDevice {
         if(size < 0){
             LOGE("error reading from device");
         }
-             */
+    }
 
-
+    void print_hmd_light_sensors() {
+        int size = 0;
+        vive_priv* priv = (vive_priv*)ctx_openhmd->active_devices[0];
         unsigned char lighthouse_buffer[FEATURE_BUFFER_SIZE];
         while((size = hid_read(priv->lighthouse_sensor_handle, lighthouse_buffer, FEATURE_BUFFER_SIZE)) > 0){
             if(lighthouse_buffer[0] == 37){
@@ -327,19 +310,19 @@ class TrackerDevice {
         if(size < 0){
             LOGE("error reading from device");
         }
-/*
+    }
 
-
-        unsigned char watchman_buffer[FEATURE_BUFFER_SIZE];
-        while((size = hid_read(priv->watchman_dongle_handle, watchman_buffer, FEATURE_BUFFER_SIZE)) > 0){
-            if(watchman_buffer[0] == 35){
-                vive_watchman_packet pkt;
-                vive_decode_watchman_packet(&pkt, watchman_buffer, size);
-                print_watchman_packet(&pkt);
-            }else if (watchman_buffer[0] == 36) {
-                // todo handle paket 36
+    void print_imu_sensors() {
+        int size = 0;
+        vive_priv* priv = (vive_priv*)ctx_openhmd->active_devices[0];
+        unsigned char buffer[FEATURE_BUFFER_SIZE];
+        while((size = hid_read(priv->imu_handle, buffer, FEATURE_BUFFER_SIZE)) > 0){
+            if(buffer[0] == VIVE_IRQ_SENSORS){
+                vive_imu_packet pkt;
+                vive_decode_imu_packet(&pkt, buffer, size);
+                print_imu_packet(&pkt);
             }else{
-                printf("unhandled message type: %u\n", watchman_buffer[0]);
+                printf("unhandled message type: %u\n", buffer[0]);
                 //LOGE("unknown message type: %u", buffer[0]);
             }
         }
@@ -347,7 +330,28 @@ class TrackerDevice {
         if(size < 0){
             LOGE("error reading from device");
         }
-*/
+    }
+
+    OSVR_ReturnCode update() {
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(
+            5)); // Simulate waiting a quarter second for data.
+
+        OSVR_TimeValue now;
+        osvrTimeValueGetNow(&now);
+        double t = 5.0 * ((double)now.seconds + ((double)now.microseconds / 1000000.0));
+
+        /// Report the identity pose for sensor 0
+        OSVR_PoseState pose;
+        osvrPose3SetIdentity(&pose);
+        pose.translation.data[0] = std::sin(t) * 0.25;
+        pose.translation.data[1] = std::cos(t + 0.5) * 0.25;
+        pose.translation.data[2] = std::sin(t + 0.25) * 0.25;
+        osvrDeviceTrackerSendPose(m_dev, m_tracker, &pose, 0);
+
+        // print_watchman_sensors();
+        // print_imu_sensors();
+        print_hmd_light_sensors();
 
         return OSVR_RETURN_SUCCESS;
     }
