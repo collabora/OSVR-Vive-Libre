@@ -1,0 +1,12 @@
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+com_osvr_Vive_Libre_json.h
+lib64/
+org_osvr_example_Tracker_json.h
+CMakeLists.txt.user
+testbin
+com_osvr_Vive_json.h
+org_osvr_Vive_Libre_json.h
+
