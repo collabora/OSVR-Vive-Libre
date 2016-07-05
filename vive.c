@@ -218,9 +218,10 @@ static ohmd_device* open_device(ohmd_driver* driver, ohmd_device_desc* desc)
     controller_command.command = 0x8f;
     controller_command.length = 7;
 
+    /*
     hret = hid_send_feature_report(priv->watchman_dongle_handle, vive_controller_power_off, sizeof(vive_controller_power_off));
     printf("vive_controller_haptic_pulse: %d\n", hret);
-
+    */
 
 	dump_info_string(hid_get_manufacturer_string, "manufacturer", priv->hmd_handle);
 	dump_info_string(hid_get_product_string , "product", priv->hmd_handle);

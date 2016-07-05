@@ -44,6 +44,13 @@ typedef struct
 typedef struct
 {
     uint8_t report_id;
+    vive_lighthouse_sample samples[7];
+    uint8_t unknown;
+} vive_controller_lighthouse_packet;
+
+typedef struct
+{
+    uint8_t report_id;
     uint8_t time1;
     uint8_t type1;
     uint8_t time2;

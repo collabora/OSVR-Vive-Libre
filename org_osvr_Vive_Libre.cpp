@@ -170,6 +170,37 @@ bool vive_decode_lighthouse_packet(vive_lighthouse_packet* pkt, const unsigned c
     return true;
 }
 
+bool vive_decode_controller_lighthouse_packet(vive_controller_lighthouse_packet* pkt, const unsigned char* buffer, int size)
+{
+    if(size != 58){
+        LOGE("invalid vive sensor packet size (expected 58 but got %d)", size);
+        return false;
+    }
+
+    pkt->report_id = read8(&buffer);
+
+    for(int j = 0; j < 7; j++){
+        pkt->samples[j].sensor_id = read8(&buffer);
+        pkt->samples[j].length = read16(&buffer);
+        pkt->samples[j].time = read32(&buffer);
+    }
+    pkt->unknown = read8(&buffer);
+
+    return true;
+}
+
+void print_controller_lighthouse_packet(vive_controller_lighthouse_packet* pkt) {
+    printf("vive controller lighthouse sample:\n");
+    printf("  report_id: %u\n", pkt->report_id);
+    for(int i = 0; i < 7; i++){
+        printf("     sensor_id[%d]: %u\n", i, pkt->samples[i].sensor_id);
+        printf("      length[%d]: %d\n", i, pkt->samples[i].length);
+        printf("      time[%d]: %zd\n", i, pkt->samples[i].time);
+        printf("\n");
+    }
+    printf("unknown: %u\n", pkt->unknown);
+}
+
 void print_lighthouse_packet(vive_lighthouse_packet* pkt) {
     printf("vive lighthouse sample:\n");
     printf("  report_id: %u\n", pkt->report_id);
@@ -236,8 +267,6 @@ class TrackerDevice {
 
     OSVR_ReturnCode update() {
 
-        //printf("update\n");
-
         std::this_thread::sleep_for(std::chrono::milliseconds(
             5)); // Simulate waiting a quarter second for data.
 
@@ -257,7 +286,7 @@ class TrackerDevice {
 
         int size = 0;
 
-        /*
+/*
         // lighthouse update
         unsigned char buffer[FEATURE_BUFFER_SIZE];
         while((size = hid_read(priv->imu_handle, buffer, FEATURE_BUFFER_SIZE)) > 0){
@@ -274,7 +303,7 @@ class TrackerDevice {
         if(size < 0){
             LOGE("error reading from device");
         }
-        */
+             */
 
 
         unsigned char lighthouse_buffer[FEATURE_BUFFER_SIZE];
@@ -283,6 +312,10 @@ class TrackerDevice {
                 vive_lighthouse_packet pkt;
                 vive_decode_lighthouse_packet(&pkt, lighthouse_buffer, size);
                 print_lighthouse_packet(&pkt);
+            } else if (lighthouse_buffer[0] == 33) {
+                vive_controller_lighthouse_packet pkt;
+                vive_decode_controller_lighthouse_packet(&pkt, lighthouse_buffer, size);
+                print_controller_lighthouse_packet(&pkt);
             }else{
                 printf("unhandled message type: %u\n", lighthouse_buffer[0]);
             }
@@ -291,8 +324,8 @@ class TrackerDevice {
         if(size < 0){
             LOGE("error reading from device");
         }
-
 /*
+
 
         unsigned char watchman_buffer[FEATURE_BUFFER_SIZE];
         while((size = hid_read(priv->watchman_dongle_handle, watchman_buffer, FEATURE_BUFFER_SIZE)) > 0){
