@@ -55,6 +55,6 @@ install(FILES
     osvr_server_config.vive_libre.sample.json
     DESTINATION .)
 
-# compile test to indicate linker errors
-add_executable(testbin test.cpp  ${SOURCES})
-target_link_libraries(testbin osvrPluginKit osvrCommon osvrUtil hidapi-libusb)
+# Build tool
+add_executable(vivectl vivectl.c  ${SOURCES})
+target_link_libraries(vivectl osvrPluginKit osvrCommon osvrUtil hidapi-libusb)
