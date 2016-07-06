@@ -17,7 +17,6 @@ find_package(JsonCpp REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system iostreams filesystem)
 find_package(Eigen3 REQUIRED)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
 
 include_directories(/usr/include/hidapi/)
@@ -34,8 +33,8 @@ osvr_convert_json(com_osvr_Vive_json
     "${CMAKE_CURRENT_BINARY_DIR}/com_osvr_Vive_json.h")
 
 set(SOURCES
-    vive.c
-    openhmd.c
+    vive.cpp
+    openhmd.cpp
     vive.h
     magic.h)
 
@@ -61,6 +60,6 @@ install(FILES
     DESTINATION .)
 
 # Build tool
-add_executable(vivectl vivectl.c)
+add_executable(vivectl vivectl.cpp)
 #target_link_libraries(vivectl osvrPluginKit osvrCommon osvrUtil hidapi-libusb)
 target_link_libraries(vivectl vive-libre)

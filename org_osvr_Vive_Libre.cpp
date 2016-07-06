@@ -102,11 +102,10 @@ class TrackerDevice {
         pose.translation.data[2] = std::sin(t + 0.25) * 0.25;
         osvrDeviceTrackerSendPose(m_dev, m_tracker, &pose, 0);
 
-        // print_watchman_sensors();
-        // print_imu_sensors();
-
         vive_priv* priv = (vive_priv*)ctx_openhmd->active_devices[0];
         print_hmd_light_sensors(priv);
+        // print_watchman_sensors(priv);
+        // print_imu_sensors(priv);
 
         return OSVR_RETURN_SUCCESS;
     }
