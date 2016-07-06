@@ -74,6 +74,63 @@ typedef struct {
     hid_device* lighthouse_sensor_handle;
 } vive_priv;
 
+
+inline static uint8_t read8(const unsigned char** buffer)
+{
+    uint8_t ret = **buffer;
+    *buffer += 1;
+    return ret;
+
+}
+
+inline static int16_t read16(const unsigned char** buffer)
+{
+    int16_t ret = **buffer | (*(*buffer + 1) << 8);
+    *buffer += 2;
+    return ret;
+}
+
+inline static int32_t read32(const unsigned char** buffer)
+{
+    int32_t ret = **buffer | (*(*buffer + 1) << 8) | (*(*buffer + 1) << 16) | (*(*buffer + 1) << 24);
+    *buffer += 4;
+    return ret;
+}
+
+inline static uint16_t uread16(const unsigned char** buffer)
+{
+    const uint8_t *val = *buffer;
+    uint16_t ret = val[0] | (val[1] << 8);
+    *buffer += 2;
+    return ret;
+}
+
+inline static uint32_t uread32(const unsigned char** buffer)
+{
+    const uint8_t *val = *buffer;
+    uint32_t ret = val[0] | (val[1] << 8) | (val[2] << 16) | (val[3] << 24);
+
+    *buffer += 4;
+    return ret;
+}
+
 bool vive_decode_imu_packet(vive_imu_packet* pkt, const unsigned char* buffer, int size);
+
+
+void ohmd_sleep(double seconds);
+bool vive_decode_imu_packet(vive_imu_packet* pkt, const unsigned char* buffer, int size);
+bool vive_decode_watchman_packet(vive_watchman_packet* pkt, const unsigned char* buffer, int size);
+bool vive_decode_lighthouse_packet(vive_lighthouse_packet* pkt, const unsigned char* buffer, int size);
+bool vive_decode_controller_lighthouse_packet(vive_controller_lighthouse_packet* pkt, const unsigned char* buffer, int size);
+
+void print_infof(ohmd_device* hmd, const char* name, int len, ohmd_float_value val);
+void print_imu_packet(vive_imu_packet* pkt);
+void print_watchman_packet(vive_watchman_packet * pkt);
+void print_controller_lighthouse_packet(vive_controller_lighthouse_packet* pkt);
+void print_lighthouse_packet(vive_lighthouse_packet* pkt);
+
+void print_watchman_sensors(vive_priv* priv);
+void print_hmd_light_sensors(vive_priv *priv);
+void print_imu_sensors(vive_priv* priv);
 
 #endif

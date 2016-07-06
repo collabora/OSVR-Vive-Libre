@@ -17,6 +17,7 @@ find_package(JsonCpp REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system iostreams filesystem)
 find_package(Eigen3 REQUIRED)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
 
 include_directories(/usr/include/hidapi/)
@@ -33,22 +34,26 @@ osvr_convert_json(com_osvr_Vive_json
     "${CMAKE_CURRENT_BINARY_DIR}/com_osvr_Vive_json.h")
 
 set(SOURCES
-    org_osvr_Vive_Libre.cpp
     vive.c
     openhmd.c
     vive.h
-    magic.h
+    magic.h)
+
+add_library(vive-libre SHARED ${SOURCES})
+target_link_libraries(vive-libre hidapi-libusb)
+
+set(OSVR_PLUGIN_SOURCES
+    org_osvr_Vive_Libre.cpp
+    ${SOURCES}
     "${CMAKE_CURRENT_BINARY_DIR}/com_osvr_Vive_json.h"
     "${CMAKE_CURRENT_BINARY_DIR}/org_osvr_Vive_Libre_json.h")
 
-osvr_add_plugin(org_osvr_Vive_Libre ${SOURCES})
+osvr_add_plugin(org_osvr_Vive_Libre ${OSVR_PLUGIN_SOURCES})
 
 target_include_directories(org_osvr_Vive_Libre
     PRIVATE
     ${EIGEN3_INCLUDE_DIR})
-
-
-target_link_libraries(org_osvr_Vive_Libre hidapi-libusb)
+target_link_libraries(org_osvr_Vive_Libre osvrPluginKit osvrCommon osvrUtil hidapi-libusb)
 
 # Install files for the plugin.
 install(FILES
@@ -56,5 +61,6 @@ install(FILES
     DESTINATION .)
 
 # Build tool
-add_executable(vivectl vivectl.c  ${SOURCES})
-target_link_libraries(vivectl osvrPluginKit osvrCommon osvrUtil hidapi-libusb)
+add_executable(vivectl vivectl.c)
+#target_link_libraries(vivectl osvrPluginKit osvrCommon osvrUtil hidapi-libusb)
+target_link_libraries(vivectl vive-libre)
