@@ -31,8 +31,8 @@ typedef struct
 typedef struct
 {
     uint8_t sensor_id;
-    int16_t length;
-    int32_t	time;
+    uint16_t length;
+    uint32_t time;
 } vive_lighthouse_sample;
 
 typedef struct

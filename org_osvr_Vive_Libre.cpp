@@ -77,6 +77,23 @@ inline static int32_t read32(const unsigned char** buffer)
     return ret;
 }
 
+inline static uint16_t uread16(const unsigned char** buffer)
+{
+    const uint8_t *val = *buffer;
+    uint16_t ret = val[0] | (val[1] << 8);
+    *buffer += 2;
+    return ret;
+}
+
+inline static uint32_t uread32(const unsigned char** buffer)
+{
+    const uint8_t *val = *buffer;
+    uint32_t ret = val[0] | (val[1] << 8) | (val[2] << 16) | (val[3] << 24);
+
+    *buffer += 4;
+    return ret;
+}
+
 bool vive_decode_imu_packet(vive_imu_packet* pkt, const unsigned char* buffer, int size)
 {
     if(size != 52){
@@ -166,8 +183,8 @@ bool vive_decode_lighthouse_packet(vive_lighthouse_packet* pkt, const unsigned c
 
     for(int j = 0; j < 9; j++){
         pkt->samples[j].sensor_id = read8(&buffer);
-        pkt->samples[j].length = read16(&buffer);
-        pkt->samples[j].time = read32(&buffer);
+        pkt->samples[j].length = uread16(&buffer);
+        pkt->samples[j].time = uread32(&buffer);
     }
 
     return true;
