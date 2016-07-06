@@ -19,7 +19,7 @@ find_package(Eigen3 REQUIRED)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
 
-include_directories(/usr/include/hidapi/)
+include_directories(/usr/include/hidapi/ src)
 
 
 # Build the plugin
@@ -33,16 +33,16 @@ osvr_convert_json(com_osvr_Vive_json
     "${CMAKE_CURRENT_BINARY_DIR}/com_osvr_Vive_json.h")
 
 set(SOURCES
-    vive.cpp
-    openhmd.cpp
-    vive.h
-    magic.h)
+    src/vive.cpp
+    src/openhmd.cpp
+    src/vive.h
+    src/magic.h)
 
 add_library(vive-libre SHARED ${SOURCES})
 target_link_libraries(vive-libre hidapi-libusb)
 
 set(OSVR_PLUGIN_SOURCES
-    org_osvr_Vive_Libre.cpp
+    src/org_osvr_Vive_Libre.cpp
     ${SOURCES}
     "${CMAKE_CURRENT_BINARY_DIR}/com_osvr_Vive_json.h"
     "${CMAKE_CURRENT_BINARY_DIR}/org_osvr_Vive_Libre_json.h")
@@ -60,6 +60,6 @@ install(FILES
     DESTINATION .)
 
 # Build tool
-add_executable(vivectl vivectl.cpp)
+add_executable(vivectl tools/vivectl.cpp)
 #target_link_libraries(vivectl osvrPluginKit osvrCommon osvrUtil hidapi-libusb)
 target_link_libraries(vivectl vive-libre)
