@@ -16,6 +16,8 @@
 #define VIVE_WATCHMAN_DONGLE     0x2101
 #define VIVE_LIGHTHOUSE_FPGA_RX  0x2000
 
+#define TICK_LEN (1.0f / 1000.0f) // 1000 Hz ticks
+
 
 #include <string.h>
 #include <wchar.h>
@@ -181,6 +183,8 @@ static ohmd_device* open_device(ohmd_driver* driver, ohmd_device_desc* desc)
 	// enable lighthouse
     //hret = hid_send_feature_report(priv->hmd_handle, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
     //printf("enable lighthouse magic: %d\n", hret);
+
+    ofusion_init(&priv->sensor_fusion);
 	
 	return (ohmd_device*)priv;
 
@@ -264,16 +268,16 @@ void vec3f_from_vive_vec_accel(const int16_t* smp, vec3f* out_vec)
 {
     float gravity = 9.81;
     out_vec->x = (float)smp[0] * (4.0*gravity/32768.0);
-    out_vec->y = (float)smp[1] * (4.0*gravity/32768.0) * -1;
+    out_vec->y = (float)smp[1] * (4.0*gravity/32768.0);
     out_vec->z = (float)smp[2] * (4.0*gravity/32768.0);
 }
 
 void vec3f_from_vive_vec_gyro(const int16_t* smp, vec3f* out_vec)
 {
-    float scaler = 8.0 / 32768.0;
-    out_vec->x = (float)smp[0] * scaler;
-    out_vec->y = (float)smp[1] * scaler * -1;
-    out_vec->z = (float)smp[2] * scaler;
+    float scalar = 8.0 / 32768.0;
+    out_vec->x = (float)smp[0] * scalar;
+    out_vec->y = (float)smp[1] * scalar;
+    out_vec->z = (float)smp[2] * scalar;
 }
 
 bool vive_decode_imu_packet(vive_imu_packet* pkt, const unsigned char* buffer, int size)
@@ -318,7 +322,7 @@ void print_imu_packet(vive_imu_packet* pkt) {
             printf("      rot[%d]: %d\n", j, pkt->samples[i].rot[j]);
         }
 
-        printf("time_ticks: %d\n", pkt->samples[i].time_ticks);
+        printf("time_ticks: %zd\n", pkt->samples[i].time_ticks);
         printf("seq: %u\n", pkt->samples[i].seq);
         printf("\n");
     }
@@ -477,7 +481,7 @@ void print_imu_sensors(vive_priv* priv) {
     }
 }
 
-static void imu_to_pose(vive_priv* priv)
+void imu_to_pose(vive_priv* priv)
 {
     int size = 0;
     unsigned char buffer[FEATURE_BUFFER_SIZE];
@@ -486,9 +490,7 @@ static void imu_to_pose(vive_priv* priv)
         if(buffer[0] == VIVE_IRQ_SENSORS){
             vive_imu_packet pkt;
             vive_decode_imu_packet(&pkt, buffer, size);
-
-            printf("imu sensor sample:\n");
-            printf("  report_id: %u\n", pkt.report_id);
+            //print_imu_packet(&pkt);
 
             uint8_t seq[3] = {
                 pkt.samples[0].seq,

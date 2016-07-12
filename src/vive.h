@@ -136,4 +136,6 @@ void print_watchman_sensors(vive_priv* priv);
 void print_hmd_light_sensors(vive_priv *priv);
 void print_imu_sensors(vive_priv* priv);
 
+void imu_to_pose(vive_priv* priv);
+
 #endif

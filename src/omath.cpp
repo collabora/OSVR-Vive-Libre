@@ -338,7 +338,8 @@ void ofq_init(filter_queue* me, int size)
 void ofq_add(filter_queue* me, const vec3f* vec)
 {
 	me->elems[me->at] = *vec;
-	me->at = ((me->at + 1) % me->size);
+    int x = me->at + 1;
+    me->at = x % me->size;
 }
 
 void ofq_get_mean(const filter_queue* me, vec3f* vec)

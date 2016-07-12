@@ -92,20 +92,34 @@ class TrackerDevice {
 
         OSVR_TimeValue now;
         osvrTimeValueGetNow(&now);
-        double t = 5.0 * ((double)now.seconds + ((double)now.microseconds / 1000000.0));
 
-        /// Report the identity pose for sensor 0
+
+
+        vive_priv* priv = (vive_priv*)ctx_openhmd->active_devices[0];
+        //print_hmd_light_sensors(priv);
+        // print_watchman_sensors(priv);
+        //print_imu_sensors(priv);
+
+        imu_to_pose(priv);
+
+        quatf out = priv->sensor_fusion.orient;
+        printf("quat: x %f y %f z %f w %f\n", out.x, out.y, out.z, out.w);
+
+        /// Report pose for sensor 0
         OSVR_PoseState pose;
         osvrPose3SetIdentity(&pose);
+        /*
+        double t = 5.0 * ((double)now.seconds + ((double)now.microseconds / 1000000.0));
         pose.translation.data[0] = std::sin(t) * 0.25;
         pose.translation.data[1] = std::cos(t + 0.5) * 0.25;
         pose.translation.data[2] = std::sin(t + 0.25) * 0.25;
-        osvrDeviceTrackerSendPose(m_dev, m_tracker, &pose, 0);
+        */
 
-        vive_priv* priv = (vive_priv*)ctx_openhmd->active_devices[0];
-        print_hmd_light_sensors(priv);
-        // print_watchman_sensors(priv);
-        // print_imu_sensors(priv);
+        pose.rotation.data[0] = out.x;
+        pose.rotation.data[1] = out.y;
+        pose.rotation.data[2] = out.z;
+        pose.rotation.data[3] = out.w;
+        osvrDeviceTrackerSendPose(m_dev, m_tracker, &pose, 0);
 
         return OSVR_RETURN_SUCCESS;
     }
