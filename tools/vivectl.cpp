@@ -31,16 +31,6 @@ vive_priv* init_hmd_context() {
         return NULL;
     }
 
-    printf("num devices: %d\n\n", num_devices);
-
-    // Print device information
-    for(int i = 0; i < num_devices; i++){
-        printf("device %d\n", i);
-        printf("  vendor:  %s\n", ohmd_list_gets(ctx_openhmd, i, OHMD_VENDOR));
-        printf("  product: %s\n", ohmd_list_gets(ctx_openhmd, i, OHMD_PRODUCT));
-        printf("  path:    %s\n\n", ohmd_list_gets(ctx_openhmd, i, OHMD_PATH));
-    }
-
     // Open default device (0)
     hmd = ohmd_list_open_device(ctx_openhmd, 0);
 
@@ -49,7 +39,7 @@ vive_priv* init_hmd_context() {
         return NULL;
     }
 
-    return (vive_priv*)ctx_openhmd->active_devices[0];
+    return (vive_priv*)hmd;
 }
 
 void free_hmd_context(vive_priv* priv) {
@@ -130,7 +120,7 @@ int main(int argc, char *argv[]) {
                 print_usage();
                 return 0;
             }
-        // send
+            // send
         } else if (compare(argv[1], "send")) {
             if(compare(argv[2], "hmd-on")) {
                 send_hmd_on();

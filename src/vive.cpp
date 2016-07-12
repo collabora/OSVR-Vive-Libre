@@ -29,113 +29,113 @@
 
 static void dump_indexed_string(hid_device* device, int index)
 {
-	wchar_t wbuffer[512] = {0};
-	char buffer[1024] = {0};
+    wchar_t wbuffer[512] = {0};
+    char buffer[1024] = {0};
 
-	int hret = hid_get_indexed_string(device, index, wbuffer, 511);	
+    int hret = hid_get_indexed_string(device, index, wbuffer, 511);
 
-	if(hret == 0){
-		wcstombs(buffer, wbuffer, sizeof(buffer));
-		printf("indexed string 0x%02x: '%s'\n", index, buffer);
-	}
+    if(hret == 0){
+        wcstombs(buffer, wbuffer, sizeof(buffer));
+        printf("indexed string 0x%02x: '%s'\n", index, buffer);
+    }
 }
 
 static void dump_info_string(int (*fun)(hid_device*, wchar_t*, size_t), const char* what, hid_device* device)
 {
-	wchar_t wbuffer[512] = {0};
-	char buffer[1024] = {0};
+    wchar_t wbuffer[512] = {0};
+    char buffer[1024] = {0};
 
-	int hret = fun(device, wbuffer, 511);	
+    int hret = fun(device, wbuffer, 511);
 
-	if(hret == 0){
-		wcstombs(buffer, wbuffer, sizeof(buffer));
-		printf("%s: '%s'\n", what, buffer);
-	}
+    if(hret == 0){
+        wcstombs(buffer, wbuffer, sizeof(buffer));
+        printf("%s: '%s'\n", what, buffer);
+    }
 }
 
 static void dumpbin(const char* label, const unsigned char* data, int length)
 {
-	printf("%s:\n", label);
-	for(int i = 0; i < length; i++){
-		printf("%02x ", data[i]);
+    printf("%s:\n", label);
+    for(int i = 0; i < length; i++){
+        printf("%02x ", data[i]);
         if((i % 16) == 15)
-			printf("\n");
-	}
-	printf("\n");
+            printf("\n");
+    }
+    printf("\n");
 }
 
 static hid_device* open_device_idx(int manufacturer, int product, int iface, int iface_tot, int device_index)
 {
-	struct hid_device_info* devs = hid_enumerate(manufacturer, product);
-	struct hid_device_info* cur_dev = devs;
+    struct hid_device_info* devs = hid_enumerate(manufacturer, product);
+    struct hid_device_info* cur_dev = devs;
 
-	int idx = 0;
-	int iface_cur = 0;
-	hid_device* ret = NULL;
+    int idx = 0;
+    int iface_cur = 0;
+    hid_device* ret = NULL;
 
     printf("Opening Manufacturer %04x Product %04x\n", manufacturer, product);
 
-	while (cur_dev) {
+    while (cur_dev) {
         printf("Path %s", cur_dev->path);
 
-		if(idx == device_index && iface == iface_cur){
+        if(idx == device_index && iface == iface_cur){
             ret = hid_open_path(cur_dev->path);
             printf(" [open]\n");
         } else {
             printf(" [skip]\n");
         }
 
-		cur_dev = cur_dev->next;
+        cur_dev = cur_dev->next;
 
-		iface_cur++;
+        iface_cur++;
 
-		if(iface_cur >= iface_tot){
-			idx++;
-			iface_cur = 0;
-		}
-	}
+        if(iface_cur >= iface_tot){
+            idx++;
+            iface_cur = 0;
+        }
+    }
 
-	hid_free_enumeration(devs);
+    hid_free_enumeration(devs);
 
     printf("Returning last opened device.\n");
 
-	return ret;
+    return ret;
 }
 
-static ohmd_device* open_device(ohmd_driver* driver, ohmd_device_desc* desc)
+static ohmd_device* vive_open_device(ohmd_driver* driver, ohmd_device_desc* desc)
 {
-	vive_priv* priv = ohmd_alloc(driver->ctx, sizeof(vive_priv));
+    vive_priv* priv = ohmd_alloc(driver->ctx, sizeof(vive_priv));
 
-	if(!priv)
-		return NULL;
+    if(!priv)
+        return NULL;
 
-	int hret = 0;
-	
-	priv->base.ctx = driver->ctx;
+    int hret = 0;
 
-	int idx = atoi(desc->path);
+    priv->base.ctx = driver->ctx;
 
-	// Open the HMD device
-	priv->hmd_handle = open_device_idx(HTC_ID, VIVE_HMD, 0, 1, idx);
+    int idx = atoi(desc->path);
 
-	if(!priv->hmd_handle)
-		goto cleanup;
-	
-	if(hid_set_nonblocking(priv->hmd_handle, 1) == -1){
-		ohmd_set_error(driver->ctx, "failed to set non-blocking on device");
-		goto cleanup;
-	}
-	
-	// Open the lighthouse device
-	priv->imu_handle = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 0, 2, idx);
+    // Open the HMD device
+    priv->hmd_handle = open_device_idx(HTC_ID, VIVE_HMD, 0, 1, idx);
 
-	if(!priv->imu_handle)
-		goto cleanup;
-	
-	if(hid_set_nonblocking(priv->imu_handle, 1) == -1){
-		ohmd_set_error(driver->ctx, "failed to set non-blocking on device");
-		goto cleanup;
-	}
+    if(!priv->hmd_handle)
+        goto cleanup;
+
+    if(hid_set_nonblocking(priv->hmd_handle, 1) == -1){
+        ohmd_set_error(driver->ctx, "failed to set non-blocking on device");
+        goto cleanup;
+    }
+
+    // Open the lighthouse device
+    priv->imu_handle = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 0, 2, idx);
+
+    if(!priv->imu_handle)
+        goto cleanup;
+
+    if(hid_set_nonblocking(priv->imu_handle, 1) == -1){
+        ohmd_set_error(driver->ctx, "failed to set non-blocking on device");
+        goto cleanup;
+    }
 
 
     priv->lighthouse_sensor_handle = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 1, 2, idx);
@@ -173,75 +173,66 @@ static ohmd_device* open_device(ohmd_driver* driver, ohmd_device_desc* desc)
     printf("vive_controller_haptic_pulse: %d\n", hret);
     */
 
-	dump_info_string(hid_get_manufacturer_string, "manufacturer", priv->hmd_handle);
-	dump_info_string(hid_get_product_string , "product", priv->hmd_handle);
-	dump_info_string(hid_get_serial_number_string, "serial number", priv->hmd_handle);
+    dump_info_string(hid_get_manufacturer_string, "manufacturer", priv->hmd_handle);
+    dump_info_string(hid_get_product_string , "product", priv->hmd_handle);
+    dump_info_string(hid_get_serial_number_string, "serial number", priv->hmd_handle);
 
-	// turn the display on
+    // turn the display on
     //hret = hid_send_feature_report(priv->hmd_handle, vive_magic_power_on, sizeof(vive_magic_power_on));
     //printf("power on magic: %d\n", hret);
-	
-	// enable lighthouse
+
+    // enable lighthouse
     //hret = hid_send_feature_report(priv->hmd_handle, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
     //printf("enable lighthouse magic: %d\n", hret);
 
     ofusion_init(&priv->sensor_fusion);
-	
-	return (ohmd_device*)priv;
+
+    return (ohmd_device*)priv;
 
 cleanup:
-	if(priv)
-		free(priv);
+    if(priv)
+        free(priv);
 
-	return NULL;
+    return NULL;
 }
 
-static void get_device_list(ohmd_driver* driver, ohmd_device_list* list)
+static void vive_get_device_list(ohmd_driver* driver, ohmd_device_list* list)
 {
-	struct hid_device_info* devs = hid_enumerate(HTC_ID, VIVE_HMD);
-	struct hid_device_info* cur_dev = devs;
+    struct hid_device_info* devs = hid_enumerate(HTC_ID, VIVE_HMD);
+    struct hid_device_info* cur_dev = devs;
 
-	int idx = 0;
-	while (cur_dev) {
-		ohmd_device_desc* desc = &list->devices[list->num_devices++];
+    int idx = 0;
+    while (cur_dev) {
+        ohmd_device_desc* desc = &list->devices[list->num_devices++];
+        snprintf(desc->path, OHMD_STR_SIZE, "%d", idx);
+        desc->driver_ptr = driver;
+        cur_dev = cur_dev->next;
+        idx++;
+    }
 
-		strcpy(desc->driver, "OpenHMD HTC Vive Driver");
-		strcpy(desc->vendor, "HTC/Valve");
-		strcpy(desc->product, "HTC Vive");
-
-		desc->revision = 0;
-
-		snprintf(desc->path, OHMD_STR_SIZE, "%d", idx);
-
-		desc->driver_ptr = driver;
-
-		cur_dev = cur_dev->next;
-		idx++;
-	}
-
-	hid_free_enumeration(devs);
+    hid_free_enumeration(devs);
 }
 
 static void destroy_driver(ohmd_driver* drv)
 {
-	LOGD("shutting down HTC Vive driver");
-	free(drv);
+    LOGD("shutting down HTC Vive driver");
+    free(drv);
 }
 
 ohmd_driver* ohmd_create_htc_vive_drv(ohmd_context* ctx)
 {
-	ohmd_driver* drv = ohmd_alloc(ctx, sizeof(ohmd_driver));
-	
-	if(!drv)
-		return NULL;
+    ohmd_driver* drv = ohmd_alloc(ctx, sizeof(ohmd_driver));
 
-	drv->get_device_list = get_device_list;
-	drv->open_device = open_device;
-	drv->get_device_list = get_device_list;
-	drv->open_device = open_device;
-	drv->destroy = destroy_driver;
+    if(!drv)
+        return NULL;
 
-	return drv;
+    drv->get_device_list = vive_get_device_list;
+    drv->open_device = vive_open_device;
+    drv->get_device_list = vive_get_device_list;
+    drv->open_device = vive_open_device;
+    drv->destroy = destroy_driver;
+
+    return drv;
 }
 
 void ohmd_sleep(double seconds)
@@ -505,10 +496,10 @@ Eigen::Quaternionf imu_to_pose(vive_priv* priv)
                 pkt.samples[2].seq,
             };
             int lowest_index
-                = (seq[0] == (uint8_t)(seq[1] + 2) ) ? 1
-                : (seq[1] == (uint8_t)(seq[2] + 2) ) ? 2
-                :                                      0
-                ;
+                    = (seq[0] == (uint8_t)(seq[1] + 2) ) ? 1
+                                                         : (seq[1] == (uint8_t)(seq[2] + 2) ) ? 2
+                                                                                              :                                      0
+                                                                                                ;
 
             for (int offset = 0; offset < 3; offset++) {
                 int index = (lowest_index + offset) % 3;
@@ -523,9 +514,9 @@ Eigen::Quaternionf imu_to_pose(vive_priv* priv)
                 t2 = priv->previous_ticks;
 
                 if (t1 != t2 && (
-                    (t1 < t2 && t2 - t1 > 0xFFFFFFFF >> 2) ||
-                    (t1 > t2 && t1 - t2 < 0xFFFFFFFF >> 2)
-                )) {
+                            (t1 < t2 && t2 - t1 > 0xFFFFFFFF >> 2) ||
+                            (t1 > t2 && t1 - t2 < 0xFFFFFFFF >> 2)
+                            )) {
                     printf("    sample[%d]:\n", index);
 
                     vec3f_from_vive_vec_accel(pkt.samples[index].acc, &priv->raw_accel);
