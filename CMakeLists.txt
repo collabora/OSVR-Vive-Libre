@@ -19,7 +19,7 @@ find_package(Eigen3 REQUIRED)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
 
-include_directories(/usr/include/hidapi/ src)
+include_directories(/usr/include/hidapi/ ${EIGEN3_INCLUDE_DIR} src)
 
 
 # Build the plugin

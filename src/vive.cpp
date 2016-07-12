@@ -18,6 +18,7 @@
 
 #define TICK_LEN (1.0f / 1000.0f) // 1000 Hz ticks
 
+#define FREQ_48KHZ 48000.0f
 
 #include <string.h>
 #include <wchar.h>
@@ -481,7 +482,13 @@ void print_imu_sensors(vive_priv* priv) {
     }
 }
 
-void imu_to_pose(vive_priv* priv)
+
+Eigen::Quaternionf openhmd_to_eigen_quaternion(quatf in) {
+    Eigen::Quaternionf q(in.x, in.y, in.z, in.w);
+    return q;
+}
+
+Eigen::Quaternionf imu_to_pose(vive_priv* priv)
 {
     int size = 0;
     unsigned char buffer[FEATURE_BUFFER_SIZE];
@@ -535,7 +542,7 @@ void imu_to_pose(vive_priv* priv)
                     printf("seq: %u\n", pkt.samples[index].seq);
                     printf("\n");
 
-                    float dt = (1/48000000.0) * (t1 - t2);
+                    float dt = TICK_LEN / FREQ_48KHZ * (t1 - t2);
                     vec3f mag = {{0.0f,0.0f,0.0f}};
                     ofusion_update(&priv->sensor_fusion, dt, &priv->raw_gyro, &priv->raw_accel, &mag);
 
@@ -547,7 +554,10 @@ void imu_to_pose(vive_priv* priv)
         }
     }
 
+
     if(size < 0){
         LOGE("error reading from device");
     }
+
+    return openhmd_to_eigen_quaternion(priv->sensor_fusion.orient);
 }

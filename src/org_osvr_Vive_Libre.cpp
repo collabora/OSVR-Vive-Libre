@@ -31,6 +31,8 @@
 #include "platform.h"
 #include "vive.h"
 
+#include <Eigen/Geometry>
+
 static const auto PREFIX = "[OSVR-Vive-Libre] ";
 
 
@@ -85,25 +87,36 @@ class TrackerDevice {
         }
     }
 
+    OSVR_Quaternion openhmd_to_osvr_quaternion(quatf in) {
+        OSVR_Quaternion quat;
+        quat.data[0] = in.x;
+        quat.data[1] = in.y;
+        quat.data[2] = in.z;
+        quat.data[3] = in.w;
+        return quat;
+    }
+
+    OSVR_Quaternion eigen_to_osvr_quaternion(Eigen::Quaternionf in) {
+        OSVR_Quaternion quat;
+        quat.data[0] = in.w();
+        quat.data[1] = in.x();
+        quat.data[2] = in.y();
+        quat.data[3] = in.z();
+        return quat;
+    }
+
     OSVR_ReturnCode update() {
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(
-            5)); // Simulate waiting a quarter second for data.
+        // Simulate waiting a quarter second for data.
+        //std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
         OSVR_TimeValue now;
         osvrTimeValueGetNow(&now);
-
-
 
         vive_priv* priv = (vive_priv*)ctx_openhmd->active_devices[0];
         //print_hmd_light_sensors(priv);
         // print_watchman_sensors(priv);
         //print_imu_sensors(priv);
-
-        imu_to_pose(priv);
-
-        quatf out = priv->sensor_fusion.orient;
-        printf("quat: x %f y %f z %f w %f\n", out.x, out.y, out.z, out.w);
 
         /// Report pose for sensor 0
         OSVR_PoseState pose;
@@ -115,10 +128,7 @@ class TrackerDevice {
         pose.translation.data[2] = std::sin(t + 0.25) * 0.25;
         */
 
-        pose.rotation.data[0] = out.x;
-        pose.rotation.data[1] = out.y;
-        pose.rotation.data[2] = out.z;
-        pose.rotation.data[3] = out.w;
+        pose.rotation = eigen_to_osvr_quaternion(imu_to_pose(priv));
         osvrDeviceTrackerSendPose(m_dev, m_tracker, &pose, 0);
 
         return OSVR_RETURN_SUCCESS;

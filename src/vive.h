@@ -8,6 +8,8 @@
 #include "openhmdi.h"
 #include "magic.h"
 
+#include <Eigen/Geometry>
+
 typedef enum
 {
 	VIVE_IRQ_SENSORS = 32,
@@ -136,6 +138,6 @@ void print_watchman_sensors(vive_priv* priv);
 void print_hmd_light_sensors(vive_priv *priv);
 void print_imu_sensors(vive_priv* priv);
 
-void imu_to_pose(vive_priv* priv);
+Eigen::Quaternionf imu_to_pose(vive_priv* priv);
 
 #endif
