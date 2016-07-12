@@ -7,11 +7,6 @@
 
 /* HTC Vive Driver */
 
-#include <string.h>
-#include <wchar.h>
-#include <assert.h>
-#include <time.h>
-
 #include <vector>
 
 #include "vive.h"
@@ -55,6 +50,7 @@ void vive_free(vive_priv* priv) {
     free(priv);
 }
 
+/*
 static void dump_indexed_string(hid_device* device, int index)
 {
     wchar_t wbuffer[512] = {0};
@@ -68,6 +64,17 @@ static void dump_indexed_string(hid_device* device, int index)
     }
 }
 
+static void dumpbin(const char* label, const unsigned char* data, int length)
+{
+    printf("%s:\n", label);
+    for(int i = 0; i < length; i++){
+        printf("%02x ", data[i]);
+        if((i % 16) == 15)
+            printf("\n");
+    }
+    printf("\n");
+}
+*/
 static void dump_info_string(int (*fun)(hid_device*, wchar_t*, size_t), const char* what, hid_device* device)
 {
     wchar_t wbuffer[512] = {0};
@@ -79,17 +86,6 @@ static void dump_info_string(int (*fun)(hid_device*, wchar_t*, size_t), const ch
         wcstombs(buffer, wbuffer, sizeof(buffer));
         printf("%s: '%s'\n", what, buffer);
     }
-}
-
-static void dumpbin(const char* label, const unsigned char* data, int length)
-{
-    printf("%s:\n", label);
-    for(int i = 0; i < length; i++){
-        printf("%02x ", data[i]);
-        if((i % 16) == 15)
-            printf("\n");
-    }
-    printf("\n");
 }
 
 static hid_device* open_device_idx(int manufacturer, int product, int iface, int iface_tot, int device_index)
@@ -236,18 +232,6 @@ std::vector<int> vive_get_device_paths(int vendor_id, int device_id)
     return paths;
 }
 
-void ohmd_sleep(double seconds)
-{
-    struct timespec sleepfor;
-
-    sleepfor.tv_sec = (time_t)seconds;
-    sleepfor.tv_nsec = (long)((seconds - sleepfor.tv_sec) * 1000000000.0);
-
-    nanosleep(&sleepfor, NULL);
-}
-
-
-
 void vec3f_from_vive_vec_accel(const int16_t* smp, vec3f* out_vec)
 {
     float gravity = 9.81;
@@ -274,15 +258,11 @@ bool vive_decode_imu_packet(vive_imu_packet* pkt, const unsigned char* buffer, i
     pkt->report_id = read8(&buffer);
 
     for(int j = 0; j < 3; j++){
-        // acceleration
-        for(int i = 0; i < 3; i++){
+        for(int i = 0; i < 3; i++)
             pkt->samples[j].acc[i] = read16(&buffer);
-        }
 
-        // rotation
-        for(int i = 0; i < 3; i++){
+        for(int i = 0; i < 3; i++)
             pkt->samples[j].rot[i] = read16(&buffer);
-        }
 
         pkt->samples[j].time_ticks = uread32(&buffer);
         pkt->samples[j].seq = read8(&buffer);
@@ -488,10 +468,9 @@ Eigen::Quaternionf imu_to_pose(vive_priv* priv)
                 pkt.samples[2].seq,
             };
             int lowest_index
-                    = (seq[0] == (uint8_t)(seq[1] + 2) ) ? 1
-                                                         : (seq[1] == (uint8_t)(seq[2] + 2) ) ? 2
-                                                                                              :                                      0
-                                                                                                ;
+                      = (seq[0] == (uint8_t)(seq[1] + 2) ) ? 1
+                      : (seq[1] == (uint8_t)(seq[2] + 2) ) ? 2
+                      :                                      0;
 
             for (int offset = 0; offset < 3; offset++) {
                 int index = (lowest_index + offset) % 3;
@@ -526,8 +505,8 @@ Eigen::Quaternionf imu_to_pose(vive_priv* priv)
                     printf("\n");
 
                     float dt = TICK_LEN / FREQ_48KHZ * (t1 - t2);
-                    vec3f mag = {{0.0f,0.0f,0.0f}};
-                    ofusion_update(&priv->sensor_fusion, dt, &priv->raw_gyro, &priv->raw_accel, &mag);
+
+                    ofusion_update(&priv->sensor_fusion, dt, &priv->raw_gyro, &priv->raw_accel);
 
                     priv->previous_ticks = pkt.samples[index].time_ticks;
                 }

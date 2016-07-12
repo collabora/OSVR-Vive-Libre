@@ -11,6 +11,7 @@
 #define FUSION_H
 
 #include "omath.h"
+#include <Eigen/Geometry>
 
 #define FF_USE_GRAVITY 1
 
@@ -20,8 +21,6 @@ typedef struct {
 	quatf orient;   // orientation
 	vec3f accel;    // acceleration
 	vec3f ang_vel;  // angular velocity
-	vec3f mag;      // magnetometer
-	vec3f raw_mag;  // raw magnetometer values
 
 	int iterations;
 	float time;
@@ -29,7 +28,7 @@ typedef struct {
 	int flags;
 
 	// filter queues for magnetometer, accelerometers and angular velocity
-	filter_queue mag_fq, accel_fq, ang_vel_fq;
+    filter_queue accel_fq, ang_vel_fq;
 
 	// gravity correction
 	int device_level_count;
@@ -39,6 +38,6 @@ typedef struct {
 } fusion;
 
 void ofusion_init(fusion* me);
-void ofusion_update(fusion* me, float dt, const vec3f* ang_vel, const vec3f* accel, const vec3f* mag_field);
+void ofusion_update(fusion* me, float dt, vec3f vec3_gyro, vec3f vec3_accel);
 
 #endif
