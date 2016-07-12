@@ -17,74 +17,41 @@ bool compare(std::string str1, std::string str2) {
     return str1.compare(str2) == 0;
 }
 
-vive_priv* init_hmd_context() {
-    /* init openhmd */
-    ohmd_context* ctx_openhmd;
-    ohmd_device* hmd;
-
-    ctx_openhmd = ohmd_ctx_create();
-
-    // Probe for devices
-    int num_devices = ohmd_ctx_probe(ctx_openhmd);
-    if(num_devices < 0){
-        printf("failed to probe devices: %s\n", ohmd_ctx_get_error(ctx_openhmd));
-        return NULL;
-    }
-
-    // Open default device (0)
-    hmd = ohmd_list_open_device(ctx_openhmd, 0);
-
-    if(!hmd){
-        printf("failed to open device: %s\n", ohmd_ctx_get_error(ctx_openhmd));
-        return NULL;
-    }
-
-    return (vive_priv*)hmd;
-}
-
-void free_hmd_context(vive_priv* priv) {
-    hid_close(priv->hmd_handle);
-    hid_close(priv->imu_handle);
-    hid_close(priv->watchman_dongle_handle);
-    hid_close(priv->lighthouse_sensor_handle);
-    free(priv);
-}
-
 void dump_controller() {
-    vive_priv* priv = init_hmd_context();
+    vive_priv* priv = vive_init();
     while(true)
         print_watchman_sensors(priv);
-    free_hmd_context(priv);
+    vive_free(priv);
 }
 
 void dump_hmd_imu() {
-    vive_priv* priv = init_hmd_context();
+    vive_priv* priv = vive_init();
     while(true)
         print_imu_sensors(priv);
-    free_hmd_context(priv);
+    vive_free(priv);
 }
 
 void dump_hmd_light() {
-    vive_priv* priv = init_hmd_context();
+    vive_priv* priv = vive_init();
     while(true)
         print_hmd_light_sensors(priv);
-    free_hmd_context(priv);
+    vive_free(priv);
 }
 
 void send_hmd_on() {
     int hret = 0;
-    vive_priv* priv = init_hmd_context();
+    vive_priv* priv = vive_init();
     printf("hmd on.\n");
 
     // turn the display on
     hret = hid_send_feature_report(priv->hmd_handle, vive_magic_power_on, sizeof(vive_magic_power_on));
     printf("power on magic: %d\n", hret);
-    free_hmd_context(priv);
+    vive_free(priv);
 }
 
 void send_hmd_off() {
     int hret = 0;
-    vive_priv* priv = init_hmd_context();
+    vive_priv* priv = vive_init();
     printf("hmd off.\n");
 
     // turn the display off
@@ -94,15 +61,15 @@ void send_hmd_off() {
     hret = hid_send_feature_report(priv->hmd_handle, vive_magic_power_off2, sizeof(vive_magic_power_off2));
     printf("power off magic 2: %d\n", hret);
 
-    free_hmd_context(priv);
+    vive_free(priv);
 }
 
 void send_controller_off() {
     int hret = 0;
     printf("controller off.\n");
-    vive_priv* priv = init_hmd_context();
+    vive_priv* priv = vive_init();
     hret = hid_send_feature_report(priv->watchman_dongle_handle, vive_controller_power_off, sizeof(vive_controller_power_off));
-    free_hmd_context(priv);
+    vive_free(priv);
 }
 
 int main(int argc, char *argv[]) {

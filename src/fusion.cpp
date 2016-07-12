@@ -8,7 +8,7 @@
 /* Sensor Fusion Implementation */
 
 #include <string.h>
-#include "openhmdi.h"
+#include "fusion.h"
 
 void ofusion_init(fusion* me)
 {

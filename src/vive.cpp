@@ -7,25 +7,53 @@
 
 /* HTC Vive Driver */
 
-#define FEATURE_BUFFER_SIZE 256
-
-#define HTC_ID                   0x0bb4
-#define VIVE_HMD                 0x2c87
-
-#define VALVE_ID                 0x28de
-#define VIVE_WATCHMAN_DONGLE     0x2101
-#define VIVE_LIGHTHOUSE_FPGA_RX  0x2000
-
-#define TICK_LEN (1.0f / 1000.0f) // 1000 Hz ticks
-
-#define FREQ_48KHZ 48000.0f
-
 #include <string.h>
 #include <wchar.h>
 #include <assert.h>
 #include <time.h>
 
+#include <vector>
+
 #include "vive.h"
+
+void vive_error(const char* msg) {
+    printf("error: %s\n", msg);
+}
+
+vive_priv* vive_init() {
+    // Probe for devices
+    std::vector<int> paths = vive_get_device_paths(HTC_ID, VIVE_HMD);
+    if(paths.size() <= 0) {
+        printf("failed to probe devices\n");
+        return NULL;
+    }
+
+    // Open default device (0)
+    int index = 0;
+
+    vive_priv* hmd;
+    if(index >= 0 && index < paths.size()){
+        hmd = vive_open_device(paths[index]);
+    } else {
+        printf("no device with index: %d\n", index);
+        return NULL;
+    }
+
+    if(!hmd){
+        printf("failed to open device\n");
+        return NULL;
+    }
+
+    return hmd;
+}
+
+void vive_free(vive_priv* priv) {
+    hid_close(priv->hmd_handle);
+    hid_close(priv->imu_handle);
+    hid_close(priv->watchman_dongle_handle);
+    hid_close(priv->lighthouse_sensor_handle);
+    free(priv);
+}
 
 static void dump_indexed_string(hid_device* device, int index)
 {
@@ -102,18 +130,11 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
     return ret;
 }
 
-static ohmd_device* vive_open_device(ohmd_driver* driver, ohmd_device_desc* desc)
+vive_priv *vive_open_device(int idx)
 {
-    vive_priv* priv = ohmd_alloc(driver->ctx, sizeof(vive_priv));
-
-    if(!priv)
-        return NULL;
+    vive_priv* priv = new vive_priv;
 
     int hret = 0;
-
-    priv->base.ctx = driver->ctx;
-
-    int idx = atoi(desc->path);
 
     // Open the HMD device
     priv->hmd_handle = open_device_idx(HTC_ID, VIVE_HMD, 0, 1, idx);
@@ -122,7 +143,7 @@ static ohmd_device* vive_open_device(ohmd_driver* driver, ohmd_device_desc* desc
         goto cleanup;
 
     if(hid_set_nonblocking(priv->hmd_handle, 1) == -1){
-        ohmd_set_error(driver->ctx, "failed to set non-blocking on device");
+        vive_error("failed to set non-blocking on device");
         goto cleanup;
     }
 
@@ -133,7 +154,7 @@ static ohmd_device* vive_open_device(ohmd_driver* driver, ohmd_device_desc* desc
         goto cleanup;
 
     if(hid_set_nonblocking(priv->imu_handle, 1) == -1){
-        ohmd_set_error(driver->ctx, "failed to set non-blocking on device");
+        vive_error("failed to set non-blocking on device");
         goto cleanup;
     }
 
@@ -143,7 +164,7 @@ static ohmd_device* vive_open_device(ohmd_driver* driver, ohmd_device_desc* desc
         goto cleanup;
 
     if(hid_set_nonblocking(priv->lighthouse_sensor_handle, 1) == -1){
-        ohmd_set_error(driver->ctx, "failed to set non-blocking on lighthouse sensor");
+        vive_error("failed to set non-blocking on lighthouse sensor");
         goto cleanup;
     }
 
@@ -153,12 +174,12 @@ static ohmd_device* vive_open_device(ohmd_driver* driver, ohmd_device_desc* desc
 
     if(!priv->watchman_dongle_handle) {
         printf("failed to open dongle!\n");
-        ohmd_set_error(driver->ctx, "failed to open watchman dongle");
+        vive_error("failed to open watchman dongle");
         goto cleanup;
     }
 
     if(hid_set_nonblocking(priv->watchman_dongle_handle, 1) == -1){
-        ohmd_set_error(driver->ctx, "failed to set non-blocking on device");
+        vive_error("failed to set non-blocking on device");
         goto cleanup;
     }
 
@@ -187,7 +208,7 @@ static ohmd_device* vive_open_device(ohmd_driver* driver, ohmd_device_desc* desc
 
     ofusion_init(&priv->sensor_fusion);
 
-    return (ohmd_device*)priv;
+    return priv;
 
 cleanup:
     if(priv)
@@ -196,43 +217,23 @@ cleanup:
     return NULL;
 }
 
-static void vive_get_device_list(ohmd_driver* driver, ohmd_device_list* list)
+std::vector<int> vive_get_device_paths(int vendor_id, int device_id)
 {
-    struct hid_device_info* devs = hid_enumerate(HTC_ID, VIVE_HMD);
+    struct hid_device_info* devs = hid_enumerate(vendor_id, device_id);
     struct hid_device_info* cur_dev = devs;
+
+    std::vector<int> paths;
 
     int idx = 0;
     while (cur_dev) {
-        ohmd_device_desc* desc = &list->devices[list->num_devices++];
-        snprintf(desc->path, OHMD_STR_SIZE, "%d", idx);
-        desc->driver_ptr = driver;
+        paths.push_back(idx);
         cur_dev = cur_dev->next;
         idx++;
     }
 
     hid_free_enumeration(devs);
-}
 
-static void destroy_driver(ohmd_driver* drv)
-{
-    LOGD("shutting down HTC Vive driver");
-    free(drv);
-}
-
-ohmd_driver* ohmd_create_htc_vive_drv(ohmd_context* ctx)
-{
-    ohmd_driver* drv = ohmd_alloc(ctx, sizeof(ohmd_driver));
-
-    if(!drv)
-        return NULL;
-
-    drv->get_device_list = vive_get_device_list;
-    drv->open_device = vive_open_device;
-    drv->get_device_list = vive_get_device_list;
-    drv->open_device = vive_open_device;
-    drv->destroy = destroy_driver;
-
-    return drv;
+    return paths;
 }
 
 void ohmd_sleep(double seconds)
@@ -245,16 +246,7 @@ void ohmd_sleep(double seconds)
     nanosleep(&sleepfor, NULL);
 }
 
-// gets float values from the device and prints them
-void print_infof(ohmd_device* hmd, const char* name, int len, ohmd_float_value val)
-{
-    float f[len];
-    ohmd_device_getf(hmd, val, f);
-    printf("%-20s", name);
-    for(int i = 0; i < len; i++)
-        printf("%f ", f[i]);
-    printf("\n");
-}
+
 
 void vec3f_from_vive_vec_accel(const int16_t* smp, vec3f* out_vec)
 {
@@ -275,7 +267,7 @@ void vec3f_from_vive_vec_gyro(const int16_t* smp, vec3f* out_vec)
 bool vive_decode_imu_packet(vive_imu_packet* pkt, const unsigned char* buffer, int size)
 {
     if(size != 52){
-        LOGE("invalid vive sensor packet size (expected 52 but got %d)", size);
+        printf("invalid vive sensor packet size (expected 52 but got %d)\n", size);
         return false;
     }
 
@@ -323,7 +315,7 @@ void print_imu_packet(vive_imu_packet* pkt) {
 bool vive_decode_watchman_packet(vive_watchman_packet* pkt, const unsigned char* buffer, int size)
 {
     if(size != 30){
-        LOGE("invalid vive sensor packet size (expected 30 but got %d)", size);
+        printf("invalid vive sensor packet size (expected 30 but got %d)\n", size);
         return false;
     }
 
@@ -353,7 +345,7 @@ void print_watchman_packet(vive_watchman_packet * pkt) {
 bool vive_decode_lighthouse_packet(vive_lighthouse_packet* pkt, const unsigned char* buffer, int size)
 {
     if(size != 64){
-        LOGE("invalid vive sensor packet size (expected 52 but got %d)", size);
+        printf("invalid vive sensor packet size (expected 52 but got %d)\n", size);
         return false;
     }
 
@@ -371,7 +363,7 @@ bool vive_decode_lighthouse_packet(vive_lighthouse_packet* pkt, const unsigned c
 bool vive_decode_controller_lighthouse_packet(vive_controller_lighthouse_packet* pkt, const unsigned char* buffer, int size)
 {
     if(size != 58){
-        LOGE("invalid vive sensor packet size (expected 58 but got %d)", size);
+        printf("invalid vive sensor packet size (expected 58 but got %d)\n", size);
         return false;
     }
 
@@ -428,7 +420,7 @@ void print_watchman_sensors(vive_priv* priv) {
     }
 
     if(size < 0){
-        LOGE("error reading from device");
+        printf("error reading from device/n");
     }
 }
 
@@ -450,7 +442,7 @@ void print_hmd_light_sensors(vive_priv* priv) {
     }
 
     if(size < 0){
-        LOGE("error reading from device");
+        printf("error reading from device\n");
     }
 }
 
@@ -469,7 +461,7 @@ void print_imu_sensors(vive_priv* priv) {
     }
 
     if(size < 0){
-        LOGE("error reading from device");
+        printf("error reading from device\n");
     }
 }
 
@@ -504,7 +496,7 @@ Eigen::Quaternionf imu_to_pose(vive_priv* priv)
             for (int offset = 0; offset < 3; offset++) {
                 int index = (lowest_index + offset) % 3;
 
-                if (priv->previous_ticks == NULL) {
+                if (priv->previous_ticks == 0) {
                     priv->previous_ticks = pkt.samples[index].time_ticks;
                     continue;
                 }
@@ -541,13 +533,13 @@ Eigen::Quaternionf imu_to_pose(vive_priv* priv)
                 }
             }
         }else{
-            LOGE("unknown message type: %u", buffer[0]);
+            printf("unknown message type: %u\n", buffer[0]);
         }
     }
 
 
     if(size < 0){
-        LOGE("error reading from device");
+        printf("error reading from device\n");
     }
 
     return openhmd_to_eigen_quaternion(priv->sensor_fusion.orient);

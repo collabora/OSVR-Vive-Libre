@@ -27,8 +27,6 @@
 
 #include "org_osvr_Vive_Libre_json.h"
 
-#include "openhmd.h"
-#include "platform.h"
 #include "vive.h"
 
 #include <Eigen/Geometry>
@@ -59,32 +57,8 @@ class TrackerDevice {
 
         /* init openhmd */
 
-        ctx_openhmd = ohmd_ctx_create();
+        vive = vive_init();
 
-        // Probe for devices
-        int num_devices = ohmd_ctx_probe(ctx_openhmd);
-        if(num_devices < 0){
-            printf("failed to probe devices: %s\n", ohmd_ctx_get_error(ctx_openhmd));
-            return;
-        }
-
-        printf("num devices: %d\n\n", num_devices);
-
-        // Print device information
-        for(int i = 0; i < num_devices; i++){
-            printf("device %d\n", i);
-            printf("  vendor:  %s\n", ohmd_list_gets(ctx_openhmd, i, OHMD_VENDOR));
-            printf("  product: %s\n", ohmd_list_gets(ctx_openhmd, i, OHMD_PRODUCT));
-            printf("  path:    %s\n\n", ohmd_list_gets(ctx_openhmd, i, OHMD_PATH));
-        }
-
-        // Open default device (0)
-        hmd = ohmd_list_open_device(ctx_openhmd, 0);
-
-        if(!hmd){
-            printf("failed to open device: %s\n", ohmd_ctx_get_error(ctx_openhmd));
-            return;
-        }
     }
 
     OSVR_Quaternion openhmd_to_osvr_quaternion(quatf in) {
@@ -119,13 +93,12 @@ class TrackerDevice {
         OSVR_TimeValue now;
         osvrTimeValueGetNow(&now);
 
-        vive_priv* priv = (vive_priv*)ctx_openhmd->active_devices[0];
 
         /// Report pose for sensor 0
         OSVR_PoseState pose;
         osvrPose3SetIdentity(&pose);
 
-        pose.rotation = eigen_to_osvr_quaternion(imu_to_pose(priv));
+        pose.rotation = eigen_to_osvr_quaternion(imu_to_pose(vive));
         osvrDeviceTrackerSendPose(m_dev, m_tracker, &pose, 0);
 
         return OSVR_RETURN_SUCCESS;
@@ -134,8 +107,8 @@ class TrackerDevice {
   private:
     osvr::pluginkit::DeviceToken m_dev;
     OSVR_TrackerDeviceInterface m_tracker;
-    ohmd_context* ctx_openhmd;
-    ohmd_device* hmd;
+    vive_priv* vive;
+    //ohmd_device* hmd;
 };
 
 class HardwareDetection {
