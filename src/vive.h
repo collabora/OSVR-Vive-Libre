@@ -17,7 +17,7 @@ typedef struct
 {
 	int16_t acc[3];
 	int16_t rot[3];
-	int32_t	time_ticks;
+    uint32_t	time_ticks;
 	uint8_t seq;
 } vive_sensor_sample;
 
@@ -72,6 +72,9 @@ typedef struct {
     hid_device* imu_handle;
     hid_device* watchman_dongle_handle;
     hid_device* lighthouse_sensor_handle;
+    fusion sensor_fusion;
+    vec3f raw_accel, raw_gyro;
+    uint32_t previous_ticks;
 } vive_priv;
 
 

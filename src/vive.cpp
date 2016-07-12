@@ -24,54 +24,6 @@
 
 #include "vive.h"
 
-static int getf(ohmd_device* device, ohmd_float_value type, float* out)
-{
-	vive_priv* priv = (vive_priv*)device;
-
-	switch(type){
-	case OHMD_ROTATION_QUAT: 
-		out[0] = out[1] = out[2] = 0;
-		out[3] = 1.0f;
-		break;
-
-	case OHMD_POSITION_VECTOR:
-		out[0] = out[1] = out[2] = 0;
-		break;
-
-	case OHMD_DISTORTION_K:
-		// TODO this should be set to the equivalent of no distortion
-		memset(out, 0, sizeof(float) * 6);
-		break;
-
-	default:
-		ohmd_set_error(priv->base.ctx, "invalid type given to getf (%ud)", type);
-		return -1;
-		break;
-	}
-
-	return 0;
-}
-
-static void close_device(ohmd_device* device)
-{
-	int hret = 0;
-	vive_priv* priv = (vive_priv*)device;
-
-	LOGD("closing HTC Vive device");
-
-	// turn the display off
-	hret = hid_send_feature_report(priv->hmd_handle, vive_magic_power_off1, sizeof(vive_magic_power_off1));
-	printf("power off magic 1: %d\n", hret);
-	
-	hret = hid_send_feature_report(priv->hmd_handle, vive_magic_power_off2, sizeof(vive_magic_power_off2));
-	printf("power off magic 2: %d\n", hret);
-
-	hid_close(priv->hmd_handle);
-	hid_close(priv->imu_handle);
-
-	free(device);
-}
-
 static void dump_indexed_string(hid_device* device, int index)
 {
 	wchar_t wbuffer[512] = {0};
@@ -192,8 +144,6 @@ static ohmd_device* open_device(ohmd_driver* driver, ohmd_device_desc* desc)
         goto cleanup;
     }
 
-
-
     priv->watchman_dongle_handle = open_device_idx(VALVE_ID, VIVE_WATCHMAN_DONGLE, 1, 2, idx);
 
     // Open the controller dongle
@@ -202,24 +152,20 @@ static ohmd_device* open_device(ohmd_driver* driver, ohmd_device_desc* desc)
         printf("failed to open dongle!\n");
         ohmd_set_error(driver->ctx, "failed to open watchman dongle");
         goto cleanup;
-
-    } else {
-        printf("opened watchman dongle! :)\n");
     }
 
     if(hid_set_nonblocking(priv->watchman_dongle_handle, 1) == -1){
         ohmd_set_error(driver->ctx, "failed to set non-blocking on device");
         goto cleanup;
-    } else {
-        printf("set watchman to non blocking.\n");
     }
 
+    /*
     vive_controller_command_packet controller_command;
     controller_command.report_id = 255;
     controller_command.command = 0x8f;
     controller_command.length = 7;
 
-    /*
+
     hret = hid_send_feature_report(priv->watchman_dongle_handle, vive_controller_power_off, sizeof(vive_controller_power_off));
     printf("vive_controller_haptic_pulse: %d\n", hret);
     */
@@ -229,16 +175,12 @@ static ohmd_device* open_device(ohmd_driver* driver, ohmd_device_desc* desc)
 	dump_info_string(hid_get_serial_number_string, "serial number", priv->hmd_handle);
 
 	// turn the display on
-	hret = hid_send_feature_report(priv->hmd_handle, vive_magic_power_on, sizeof(vive_magic_power_on));
-	printf("power on magic: %d\n", hret);
+    //hret = hid_send_feature_report(priv->hmd_handle, vive_magic_power_on, sizeof(vive_magic_power_on));
+    //printf("power on magic: %d\n", hret);
 	
 	// enable lighthouse
-	//hret = hid_send_feature_report(priv->hmd_handle, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
+    //hret = hid_send_feature_report(priv->hmd_handle, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
     //printf("enable lighthouse magic: %d\n", hret);
-
-	// set up device callbacks
-	priv->base.close = close_device;
-	priv->base.getf = getf;
 	
 	return (ohmd_device*)priv;
 
@@ -318,6 +260,22 @@ void print_infof(ohmd_device* hmd, const char* name, int len, ohmd_float_value v
     printf("\n");
 }
 
+void vec3f_from_vive_vec_accel(const int16_t* smp, vec3f* out_vec)
+{
+    float gravity = 9.81;
+    out_vec->x = (float)smp[0] * (4.0*gravity/32768.0);
+    out_vec->y = (float)smp[1] * (4.0*gravity/32768.0) * -1;
+    out_vec->z = (float)smp[2] * (4.0*gravity/32768.0);
+}
+
+void vec3f_from_vive_vec_gyro(const int16_t* smp, vec3f* out_vec)
+{
+    float scaler = 8.0 / 32768.0;
+    out_vec->x = (float)smp[0] * scaler;
+    out_vec->y = (float)smp[1] * scaler * -1;
+    out_vec->z = (float)smp[2] * scaler;
+}
+
 bool vive_decode_imu_packet(vive_imu_packet* pkt, const unsigned char* buffer, int size)
 {
     if(size != 52){
@@ -338,7 +296,7 @@ bool vive_decode_imu_packet(vive_imu_packet* pkt, const unsigned char* buffer, i
             pkt->samples[j].rot[i] = read16(&buffer);
         }
 
-        pkt->samples[j].time_ticks = read32(&buffer);
+        pkt->samples[j].time_ticks = uread32(&buffer);
         pkt->samples[j].seq = read8(&buffer);
     }
 
@@ -511,6 +469,79 @@ void print_imu_sensors(vive_priv* priv) {
         }else{
             printf("unhandled message type: %u\n", buffer[0]);
             //LOGE("unknown message type: %u", buffer[0]);
+        }
+    }
+
+    if(size < 0){
+        LOGE("error reading from device");
+    }
+}
+
+static void imu_to_pose(vive_priv* priv)
+{
+    int size = 0;
+    unsigned char buffer[FEATURE_BUFFER_SIZE];
+
+    while((size = hid_read(priv->imu_handle, buffer, FEATURE_BUFFER_SIZE)) > 0){
+        if(buffer[0] == VIVE_IRQ_SENSORS){
+            vive_imu_packet pkt;
+            vive_decode_imu_packet(&pkt, buffer, size);
+
+            printf("imu sensor sample:\n");
+            printf("  report_id: %u\n", pkt.report_id);
+
+            uint8_t seq[3] = {
+                pkt.samples[0].seq,
+                pkt.samples[1].seq,
+                pkt.samples[2].seq,
+            };
+            int lowest_index
+                = (seq[0] == (uint8_t)(seq[1] + 2) ) ? 1
+                : (seq[1] == (uint8_t)(seq[2] + 2) ) ? 2
+                :                                      0
+                ;
+
+            for (int offset = 0; offset < 3; offset++) {
+                int index = (lowest_index + offset) % 3;
+
+                if (priv->previous_ticks == NULL) {
+                    priv->previous_ticks = pkt.samples[index].time_ticks;
+                    continue;
+                }
+
+                uint32_t t1, t2;
+                t1 = pkt.samples[index].time_ticks;
+                t2 = priv->previous_ticks;
+
+                if (t1 != t2 && (
+                    (t1 < t2 && t2 - t1 > 0xFFFFFFFF >> 2) ||
+                    (t1 > t2 && t1 - t2 < 0xFFFFFFFF >> 2)
+                )) {
+                    printf("    sample[%d]:\n", index);
+
+                    vec3f_from_vive_vec_accel(pkt.samples[index].acc, &priv->raw_accel);
+                    printf("      acc[0]: %f\n", priv->raw_accel.x);
+                    printf("      acc[1]: %f\n", priv->raw_accel.y);
+                    printf("      acc[2]: %f\n", priv->raw_accel.z);
+
+                    vec3f_from_vive_vec_gyro(pkt.samples[index].rot, &priv->raw_gyro);
+                    printf("      gyro[0]: %f\n", priv->raw_gyro.x);
+                    printf("      gyro[1]: %f\n", priv->raw_gyro.y);
+                    printf("      gyro[2]: %f\n", priv->raw_gyro.z);
+
+                    printf("time_ticks: %u\n", pkt.samples[index].time_ticks);
+                    printf("seq: %u\n", pkt.samples[index].seq);
+                    printf("\n");
+
+                    float dt = (1/48000000.0) * (t1 - t2);
+                    vec3f mag = {{0.0f,0.0f,0.0f}};
+                    ofusion_update(&priv->sensor_fusion, dt, &priv->raw_gyro, &priv->raw_accel, &mag);
+
+                    priv->previous_ticks = pkt.samples[index].time_ticks;
+                }
+            }
+        }else{
+            LOGE("unknown message type: %u", buffer[0]);
         }
     }
 

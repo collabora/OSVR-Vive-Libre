@@ -36,6 +36,8 @@ set(SOURCES
     src/vive.cpp
     src/openhmd.cpp
     src/vive.h
+    src/fusion.cpp
+    src/omath.cpp
     src/magic.h)
 
 add_library(vive-libre SHARED ${SOURCES})
