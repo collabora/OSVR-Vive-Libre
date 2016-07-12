@@ -38,6 +38,9 @@ set(SOURCES
     src/vive.h
     src/fusion.cpp
     src/omath.cpp
+    src/log.h
+    src/openhmd.h
+    src/openhmdi.h
     src/magic.h)
 
 add_library(vive-libre SHARED ${SOURCES})
@@ -63,5 +66,4 @@ install(FILES
 
 # Build tool
 add_executable(vivectl tools/vivectl.cpp)
-#target_link_libraries(vivectl osvrPluginKit osvrCommon osvrUtil hidapi-libusb)
 target_link_libraries(vivectl vive-libre)

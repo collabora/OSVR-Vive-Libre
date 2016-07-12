@@ -107,26 +107,23 @@ class TrackerDevice {
 
     OSVR_ReturnCode update() {
 
+        /*
         // Simulate waiting a quarter second for data.
         //std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
-        OSVR_TimeValue now;
-        osvrTimeValueGetNow(&now);
-
-        vive_priv* priv = (vive_priv*)ctx_openhmd->active_devices[0];
-        //print_hmd_light_sensors(priv);
-        // print_watchman_sensors(priv);
-        //print_imu_sensors(priv);
-
-        /// Report pose for sensor 0
-        OSVR_PoseState pose;
-        osvrPose3SetIdentity(&pose);
-        /*
         double t = 5.0 * ((double)now.seconds + ((double)now.microseconds / 1000000.0));
         pose.translation.data[0] = std::sin(t) * 0.25;
         pose.translation.data[1] = std::cos(t + 0.5) * 0.25;
         pose.translation.data[2] = std::sin(t + 0.25) * 0.25;
         */
+
+        OSVR_TimeValue now;
+        osvrTimeValueGetNow(&now);
+
+        vive_priv* priv = (vive_priv*)ctx_openhmd->active_devices[0];
+
+        /// Report pose for sensor 0
+        OSVR_PoseState pose;
+        osvrPose3SetIdentity(&pose);
 
         pose.rotation = eigen_to_osvr_quaternion(imu_to_pose(priv));
         osvrDeviceTrackerSendPose(m_dev, m_tracker, &pose, 0);
