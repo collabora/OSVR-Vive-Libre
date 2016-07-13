@@ -55,7 +55,7 @@ class TrackerDevice {
         m_dev.registerUpdateCallback(this);
 
         // init vive-libre
-        vive = vive_init();
+        vive = vl_driver_init();
     }
 
     OSVR_Quaternion openhmd_to_osvr_quaternion(quatf in) {
@@ -104,7 +104,7 @@ class TrackerDevice {
   private:
     osvr::pluginkit::DeviceToken m_dev;
     OSVR_TrackerDeviceInterface m_tracker;
-    vive_priv* vive;
+    vl_driver* vive;
 };
 
 class HardwareDetection {

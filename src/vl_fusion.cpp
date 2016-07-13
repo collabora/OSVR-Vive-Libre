@@ -10,9 +10,9 @@
 #include <string.h>
 #include "vl_fusion.h"
 
-void ofusion_init(fusion* me)
+void ofusion_init(vl_fusion* me)
 {
-	memset(me, 0, sizeof(fusion));
+    memset(me, 0, sizeof(vl_fusion));
 	me->orient.w = 1.0f;
 
 	ofq_init(&me->accel_fq, 20);
@@ -22,7 +22,7 @@ void ofusion_init(fusion* me)
 	me->grav_gain = 0.05f;
 }
 
-void correct_gravity(fusion* me, const vec3f* accel, float ang_vel_length) {
+void correct_gravity(vl_fusion* me, const vec3f* accel, float ang_vel_length) {
     const float gravity_tolerance = .4f, ang_vel_tolerance = .1f;
     const float min_tilt_error = 0.05f, max_tilt_error = 0.01f;
 
@@ -91,7 +91,7 @@ vec3f vec3_eigen_to_ohmd(Eigen::Vector3f v) {
     vector.z = v.z();
 }
 
-void ofusion_update(fusion* me, float dt, vec3f vec3_gyro, vec3f vec3_accel)
+void ofusion_update(vl_fusion* me, float dt, vec3f vec3_gyro, vec3f vec3_accel)
 {
     /*
     vec3f ang_vel = vec3_eigen_to_ohmd(vec3_gyro);

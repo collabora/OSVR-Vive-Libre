@@ -35,9 +35,9 @@ typedef struct {
 	float grav_error_angle;
 	vec3f grav_error_axis;
 	float grav_gain; // amount of correction
-} fusion;
+} vl_fusion;
 
-void ofusion_init(fusion* me);
-void ofusion_update(fusion* me, float dt, vec3f vec3_gyro, vec3f vec3_accel);
+void ofusion_init(vl_fusion* me);
+void ofusion_update(vl_fusion* me, float dt, vec3f vec3_gyro, vec3f vec3_accel);
 
 #endif
