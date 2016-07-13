@@ -22,14 +22,13 @@
 #include <thread>
 #include <iostream>
 
+#include <Eigen/Geometry>
+
 #include <osvr/PluginKit/PluginKit.h>
 #include <osvr/PluginKit/TrackerInterfaceC.h>
 
 #include "org_osvr_Vive_Libre_json.h"
-
-#include "vive.h"
-
-#include <Eigen/Geometry>
+#include "vl_driver.h"
 
 static const auto PREFIX = "[vive-libre] ";
 

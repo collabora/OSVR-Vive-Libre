@@ -9,7 +9,7 @@
 
 #include <vector>
 
-#include "vive.h"
+#include "vl_driver.h"
 
 void vive_error(const char* msg) {
     printf("error: %s\n", msg);

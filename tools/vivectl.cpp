@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string>
-#include "vive.h"
+#include "vl_driver.h"
 
 
 void print_usage() {

@@ -8,7 +8,7 @@
 /* Sensor Fusion Implementation */
 
 #include <string.h>
-#include "fusion.h"
+#include "vl_fusion.h"
 
 void ofusion_init(fusion* me)
 {
