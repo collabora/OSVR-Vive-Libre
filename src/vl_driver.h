@@ -24,10 +24,10 @@
 #define FREQ_48KHZ 48000.0f
 
 typedef struct {
-    hid_device* hmd_handle;
-    hid_device* imu_handle;
-    hid_device* watchman_dongle_handle;
-    hid_device* lighthouse_sensor_handle;
+    hid_device* hmd_device;
+    hid_device* hmd_imu_device;
+    hid_device* watchman_dongle_device;
+    hid_device* hmd_light_sensor_device;
     uint32_t previous_ticks;
     vl_fusion sensor_fusion;
 } vl_driver;

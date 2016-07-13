@@ -43,10 +43,10 @@ vl_driver* vl_driver_init() {
 }
 
 void vl_driver_close(vl_driver* priv) {
-    hid_close(priv->hmd_handle);
-    hid_close(priv->imu_handle);
-    hid_close(priv->watchman_dongle_handle);
-    hid_close(priv->lighthouse_sensor_handle);
+    hid_close(priv->hmd_device);
+    hid_close(priv->hmd_imu_device);
+    hid_close(priv->watchman_dongle_device);
+    hid_close(priv->hmd_light_sensor_device);
     free(priv);
 }
 
@@ -75,7 +75,7 @@ static void dumpbin(const char* label, const unsigned char* data, int length)
     printf("\n");
 }
 */
-static void dump_info_string(int (*fun)(hid_device*, wchar_t*, size_t), const char* what, hid_device* device)
+static void print_info_string(int (*fun)(hid_device*, wchar_t*, size_t), const char* what, hid_device* device)
 {
     wchar_t wbuffer[512] = {0};
     char buffer[1024] = {0};
@@ -88,6 +88,13 @@ static void dump_info_string(int (*fun)(hid_device*, wchar_t*, size_t), const ch
     }
 }
 
+void print_device_info(hid_device* dev) {
+    print_info_string(hid_get_manufacturer_string, "Manufacturer", dev);
+    print_info_string(hid_get_product_string , "Product", dev);
+    print_info_string(hid_get_serial_number_string, "Serial Number", dev);
+}
+
+
 static hid_device* open_device_idx(int manufacturer, int product, int iface, int iface_tot, int device_index)
 {
     struct hid_device_info* devs = hid_enumerate(manufacturer, product);
@@ -97,34 +104,31 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
     int iface_cur = 0;
     hid_device* ret = NULL;
 
-    printf("Opening Manufacturer %04x Product %04x\n", manufacturer, product);
+    printf("Opening %04x:%04x %d/%d\n", manufacturer, product, iface+1, iface_tot);
 
     while (cur_dev) {
-        printf("Path %s", cur_dev->path);
-
-        if(idx == device_index && iface == iface_cur){
+        if(idx == device_index && iface == iface_cur)
             ret = hid_open_path(cur_dev->path);
-            printf(" [open]\n");
-        } else {
-            printf(" [skip]\n");
-        }
-
         cur_dev = cur_dev->next;
-
         iface_cur++;
-
         if(iface_cur >= iface_tot){
             idx++;
             iface_cur = 0;
         }
     }
-
     hid_free_enumeration(devs);
 
-    printf("Returning last opened device.\n");
+    if(hid_set_nonblocking(ret, 1) == -1){
+        vl_error("failed to set non-blocking on device.");
+        return NULL;
+    }
+
+    print_device_info(ret);
 
     return ret;
 }
+
+
 
 vl_driver *vl_driver_open_device(int idx)
 {
@@ -133,55 +137,22 @@ vl_driver *vl_driver_open_device(int idx)
     int hret = 0;
 
     // Open the HMD device
-    drv->hmd_handle = open_device_idx(HTC_ID, VIVE_HMD, 0, 1, idx);
-
-    if(!drv->hmd_handle)
+    drv->hmd_device = open_device_idx(HTC_ID, VIVE_HMD, 0, 1, idx);
+    if(!drv->hmd_device)
         goto cleanup;
-
-    if(hid_set_nonblocking(drv->hmd_handle, 1) == -1){
-        vl_error("failed to set non-blocking on device");
-        goto cleanup;
-    }
 
     // Open the lighthouse device
-    drv->imu_handle = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 0, 2, idx);
-
-    if(!drv->imu_handle)
+    drv->hmd_imu_device = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 0, 2, idx);
+    if(!drv->hmd_imu_device)
         goto cleanup;
 
-    if(hid_set_nonblocking(drv->imu_handle, 1) == -1){
-        vl_error("failed to set non-blocking on device");
-        goto cleanup;
-    }
-
-
-    drv->lighthouse_sensor_handle = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 1, 2, idx);
-    if(!drv->lighthouse_sensor_handle)
+    drv->hmd_light_sensor_device = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 1, 2, idx);
+    if(!drv->hmd_light_sensor_device)
         goto cleanup;
 
-    if(hid_set_nonblocking(drv->lighthouse_sensor_handle, 1) == -1){
-        vl_error("failed to set non-blocking on lighthouse sensor");
+    drv->watchman_dongle_device = open_device_idx(VALVE_ID, VIVE_WATCHMAN_DONGLE, 1, 2, idx);
+    if(!drv->watchman_dongle_device)
         goto cleanup;
-    }
-
-    drv->watchman_dongle_handle = open_device_idx(VALVE_ID, VIVE_WATCHMAN_DONGLE, 1, 2, idx);
-
-    // Open the controller dongle
-
-    if(!drv->watchman_dongle_handle) {
-        printf("failed to open dongle!\n");
-        vl_error("failed to open watchman dongle");
-        goto cleanup;
-    }
-
-    if(hid_set_nonblocking(drv->watchman_dongle_handle, 1) == -1){
-        vl_error("failed to set non-blocking on device");
-        goto cleanup;
-    }
-
-    dump_info_string(hid_get_manufacturer_string, "manufacturer", drv->hmd_handle);
-    dump_info_string(hid_get_product_string , "product", drv->hmd_handle);
-    dump_info_string(hid_get_serial_number_string, "serial number", drv->hmd_handle);
 
     // enable lighthouse
     //hret = hid_send_feature_report(priv->hmd_handle, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
@@ -331,16 +302,16 @@ int get_lowest_index(uint8_t s0, uint8_t s1, uint8_t s2) {
          :                              0;
 }
 
-Eigen::Quaternionf imu_to_pose(vl_driver* priv)
+Eigen::Quaternionf imu_to_pose(vl_driver* drv)
 {
     int size = 0;
     unsigned char buffer[FEATURE_BUFFER_SIZE];
 
-    while((size = hid_read(priv->imu_handle, buffer, FEATURE_BUFFER_SIZE)) > 0){
+    while((size = hid_read(drv->hmd_imu_device, buffer, FEATURE_BUFFER_SIZE)) > 0){
         if(buffer[0] == VL_MSG_HMD_IMU){
             vl_msg_hmd_imu pkt;
             vl_msg_decode_hmd_imu(&pkt, buffer, size);
-            vl_msg_print_hmd_imu(&pkt);
+            //vl_msg_print_hmd_imu(&pkt);
 
             int li = get_lowest_index(
                         pkt.samples[0].seq,
@@ -352,12 +323,12 @@ Eigen::Quaternionf imu_to_pose(vl_driver* priv)
 
                 vl_imu_sample sample = pkt.samples[index];
 
-                if (priv->previous_ticks == 0) {
-                    priv->previous_ticks = sample.time_ticks;
+                if (drv->previous_ticks == 0) {
+                    drv->previous_ticks = sample.time_ticks;
                     continue;
                 }
 
-                if (is_timestamp_valid(sample.time_ticks, priv->previous_ticks)) {
+                if (is_timestamp_valid(sample.time_ticks, drv->previous_ticks)) {
 
                     vec3f raw_accel, raw_gyro;
                     /*
@@ -373,11 +344,11 @@ Eigen::Quaternionf imu_to_pose(vl_driver* priv)
                     printf("seq: %u\n", sample.seq);
                     printf("\n");
 
-                    float dt = TICK_LEN / FREQ_48KHZ * (sample.time_ticks - priv->previous_ticks);
+                    float dt = TICK_LEN / FREQ_48KHZ * (sample.time_ticks - drv->previous_ticks);
 
-                    ofusion_update(&priv->sensor_fusion, dt, raw_gyro, raw_accel);
+                    ofusion_update(&drv->sensor_fusion, dt, raw_gyro, raw_accel);
 
-                    priv->previous_ticks = pkt.samples[index].time_ticks;
+                    drv->previous_ticks = pkt.samples[index].time_ticks;
                 }
             }
         }else{
@@ -390,5 +361,5 @@ Eigen::Quaternionf imu_to_pose(vl_driver* priv)
         printf("error reading from device\n");
     }
 
-    return openhmd_to_eigen_quaternion(priv->sensor_fusion.orient);
+    return openhmd_to_eigen_quaternion(drv->sensor_fusion.orient);
 }

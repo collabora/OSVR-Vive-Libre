@@ -20,21 +20,21 @@ bool compare(std::string str1, std::string str2) {
 void dump_controller() {
     vl_driver* drv = vl_driver_init();
     while(true)
-        vl_driver_log_watchman(drv->watchman_dongle_handle);
+        vl_driver_log_watchman(drv->watchman_dongle_device);
     vl_driver_close(drv);
 }
 
 void dump_hmd_imu() {
     vl_driver* drv = vl_driver_init();
     while(true)
-        vl_driver_log_hmd_imu(drv->imu_handle);
+        vl_driver_log_hmd_imu(drv->hmd_imu_device);
     vl_driver_close(drv);
 }
 
 void dump_hmd_light() {
     vl_driver* drv = vl_driver_init();
     while(true)
-        vl_driver_log_hmd_light(drv->lighthouse_sensor_handle);
+        vl_driver_log_hmd_light(drv->hmd_light_sensor_device);
     vl_driver_close(drv);
 }
 
@@ -44,7 +44,7 @@ void send_hmd_on() {
     printf("hmd on.\n");
 
     // turn the display on
-    hret = hid_send_feature_report(drv->hmd_handle, vive_magic_power_on, sizeof(vive_magic_power_on));
+    hret = hid_send_feature_report(drv->hmd_device, vive_magic_power_on, sizeof(vive_magic_power_on));
     printf("power on magic: %d\n", hret);
     vl_driver_close(drv);
 }
@@ -55,10 +55,10 @@ void send_hmd_off() {
     printf("hmd off.\n");
 
     // turn the display off
-    hret = hid_send_feature_report(drv->hmd_handle, vive_magic_power_off1, sizeof(vive_magic_power_off1));
+    hret = hid_send_feature_report(drv->hmd_device, vive_magic_power_off1, sizeof(vive_magic_power_off1));
     printf("power off magic 1: %d\n", hret);
 
-    hret = hid_send_feature_report(drv->hmd_handle, vive_magic_power_off2, sizeof(vive_magic_power_off2));
+    hret = hid_send_feature_report(drv->hmd_device, vive_magic_power_off2, sizeof(vive_magic_power_off2));
     printf("power off magic 2: %d\n", hret);
 
     vl_driver_close(drv);
@@ -68,7 +68,7 @@ void send_controller_off() {
     int hret = 0;
     printf("controller off.\n");
     vl_driver* drv = vl_driver_init();
-    hret = hid_send_feature_report(drv->watchman_dongle_handle, vive_controller_power_off, sizeof(vive_controller_power_off));
+    hret = hid_send_feature_report(drv->watchman_dongle_device, vive_controller_power_off, sizeof(vive_controller_power_off));
     vl_driver_close(drv);
 }
 
