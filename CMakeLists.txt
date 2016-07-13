@@ -41,6 +41,7 @@ set(SOURCES
     src/vl_messages.h
     src/vl_controller.h
     src/vl_hmd.h
+    src/vl_math.h
     src/omath.cpp
     src/omath.h)
 

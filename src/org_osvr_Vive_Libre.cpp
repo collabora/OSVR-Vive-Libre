@@ -29,6 +29,7 @@
 
 #include "org_osvr_Vive_Libre_json.h"
 #include "vl_driver.h"
+#include "vl_math.h"
 
 static const auto PREFIX = "[vive-libre] ";
 
@@ -58,23 +59,6 @@ class TrackerDevice {
         vive = vl_driver_init();
     }
 
-    OSVR_Quaternion openhmd_to_osvr_quaternion(quatf in) {
-        OSVR_Quaternion quat;
-        quat.data[0] = in.x;
-        quat.data[1] = in.y;
-        quat.data[2] = in.z;
-        quat.data[3] = in.w;
-        return quat;
-    }
-
-    OSVR_Quaternion eigen_to_osvr_quaternion(Eigen::Quaternionf in) {
-        OSVR_Quaternion quat;
-        quat.data[0] = in.w();
-        quat.data[1] = in.x();
-        quat.data[2] = in.y();
-        quat.data[3] = in.z();
-        return quat;
-    }
 
     OSVR_ReturnCode update() {
 

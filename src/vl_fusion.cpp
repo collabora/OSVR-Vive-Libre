@@ -84,13 +84,6 @@ void correct_gravity(vl_fusion* me, const vec3f* accel, float ang_vel_length) {
     }
 }
 
-vec3f vec3_eigen_to_ohmd(Eigen::Vector3f v) {
-    vec3f vector;
-    vector.x = v.x();
-    vector.y = v.y();
-    vector.z = v.z();
-}
-
 void ofusion_update(vl_fusion* me, float dt, vec3f vec3_gyro, vec3f vec3_accel)
 {
     /*

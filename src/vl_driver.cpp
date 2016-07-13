@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "vl_driver.h"
+#include "vl_math.h"
 
 void vl_error(const char* msg) {
     printf("error: %s\n", msg);
@@ -280,12 +281,6 @@ void vl_driver_log_hmd_imu(hid_device* dev) {
     if(size < 0){
         printf("error reading from device\n");
     }
-}
-
-
-Eigen::Quaternionf openhmd_to_eigen_quaternion(quatf in) {
-    Eigen::Quaternionf q(in.x, in.y, in.z, in.w);
-    return q;
 }
 
 bool is_timestamp_valid(uint32_t t1, uint32_t t2) {
