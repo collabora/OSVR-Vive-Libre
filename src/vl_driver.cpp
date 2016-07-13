@@ -233,7 +233,6 @@ void vl_driver_log_watchman(hid_device *dev) {
             // todo handle paket 36
         }else{
             printf("unhandled message type: %u\n", watchman_buffer[0]);
-            //LOGE("unknown message type: %u", buffer[0]);
         }
     }
 
