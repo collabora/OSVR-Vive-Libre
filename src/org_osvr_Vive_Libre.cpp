@@ -31,34 +31,32 @@
 
 #include <Eigen/Geometry>
 
-static const auto PREFIX = "[OSVR-Vive-Libre] ";
+static const auto PREFIX = "[vive-libre] ";
 
 
 class TrackerDevice {
   public:
     TrackerDevice(OSVR_PluginRegContext ctx) {
-        /* init osvr device */
+        // init osvr device
 
-        std::cout << PREFIX << "Init device." << std::endl;
+        std::cout << PREFIX << "Init Tracker Device." << std::endl;
         
         OSVR_DeviceInitOptions opts = osvrDeviceCreateInitOptions(ctx);
 
-        // configure our tracker
+        // configure tracker
         osvrDeviceTrackerConfigure(opts, &m_tracker);
 
-        /// Create the device token with the options
+        // Create the device token with the options
         m_dev.initAsync(ctx, "Tracker", opts);
 
-        /// Send JSON descriptor
+        // Send JSON descriptor
         m_dev.sendJsonDescriptor(org_osvr_Vive_Libre_json);
 
-        /// Register update callback
+        // Register update callback
         m_dev.registerUpdateCallback(this);
 
-        /* init openhmd */
-
+        // init vive-libre
         vive = vive_init();
-
     }
 
     OSVR_Quaternion openhmd_to_osvr_quaternion(quatf in) {
@@ -108,14 +106,13 @@ class TrackerDevice {
     osvr::pluginkit::DeviceToken m_dev;
     OSVR_TrackerDeviceInterface m_tracker;
     vive_priv* vive;
-    //ohmd_device* hmd;
 };
 
 class HardwareDetection {
   public:
     HardwareDetection() : m_found(false) {
     
-    std::cout << PREFIX << "Detecting VIVE hardware." << std::endl;
+    std::cout << PREFIX << "Detecting Vive Hardware." << std::endl;
     
     }
     OSVR_ReturnCode operator()(OSVR_PluginRegContext ctx) {
@@ -141,7 +138,7 @@ OSVR_PLUGIN(org_osvr_Vive_Libre) {
 
     osvr::pluginkit::PluginContext context(ctx);
     
-    std::cout << PREFIX << "Plugin init." << std::endl;
+    std::cout << PREFIX << "Init Plug-In." << std::endl;
 
     /// Register a detection callback function object.
     context.registerHardwareDetectCallback(new HardwareDetection());
