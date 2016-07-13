@@ -240,9 +240,24 @@ void vec3f_from_vive_vec_accel(const int16_t* smp, vec3f* out_vec)
     out_vec->z = (float)smp[2] * (4.0*gravity/32768.0);
 }
 
+#define VL_GRAVITY 9.8
+#define VL_POW_2_15 32768.0
+
+Eigen::Vector3f vec3_from_accel(const int16_t* smp)
+{
+    Eigen::Vector3f sample(smp[0], smp[1], smp[2]);
+    return sample * 4.0 * VL_GRAVITY / VL_POW_2_15;
+}
+
+Eigen::Vector3f vec3_from_gyro(const int16_t* smp)
+{
+    Eigen::Vector3f sample(smp[0], smp[1], smp[2]);
+    return sample * 8.0 / VL_POW_2_15;
+}
+
 void vec3f_from_vive_vec_gyro(const int16_t* smp, vec3f* out_vec)
 {
-    float scalar = 8.0 / 32768.0;
+    float scalar = 8.0 / VL_POW_2_15;
     out_vec->x = (float)smp[0] * scalar;
     out_vec->y = (float)smp[1] * scalar;
     out_vec->z = (float)smp[2] * scalar;
@@ -451,6 +466,19 @@ Eigen::Quaternionf openhmd_to_eigen_quaternion(quatf in) {
     return q;
 }
 
+bool is_timestamp_valid(uint32_t t1, uint32_t t2) {
+    return t1 != t2 && (
+        (t1 < t2 && t2 - t1 > 0xFFFFFFFF >> 2) ||
+        (t1 > t2 && t1 - t2 < 0xFFFFFFFF >> 2)
+    );
+}
+
+int get_lowest_index(uint8_t s0, uint8_t s1, uint8_t s2) {
+    return (s0 == (uint8_t)(s1 + 2) ) ? 1
+         : (s1 == (uint8_t)(s2 + 2) ) ? 2
+         :                              0;
+}
+
 Eigen::Quaternionf imu_to_pose(vive_priv* priv)
 {
     int size = 0;
@@ -460,53 +488,42 @@ Eigen::Quaternionf imu_to_pose(vive_priv* priv)
         if(buffer[0] == VIVE_IRQ_SENSORS){
             vive_imu_packet pkt;
             vive_decode_imu_packet(&pkt, buffer, size);
-            //print_imu_packet(&pkt);
+            print_imu_packet(&pkt);
 
-            uint8_t seq[3] = {
-                pkt.samples[0].seq,
-                pkt.samples[1].seq,
-                pkt.samples[2].seq,
-            };
-            int lowest_index
-                      = (seq[0] == (uint8_t)(seq[1] + 2) ) ? 1
-                      : (seq[1] == (uint8_t)(seq[2] + 2) ) ? 2
-                      :                                      0;
+            int li = get_lowest_index(
+                        pkt.samples[0].seq,
+                        pkt.samples[1].seq,
+                        pkt.samples[2].seq);
 
             for (int offset = 0; offset < 3; offset++) {
-                int index = (lowest_index + offset) % 3;
+                int index = (li + offset) % 3;
+
+                vive_sensor_sample sample = pkt.samples[index];
 
                 if (priv->previous_ticks == 0) {
-                    priv->previous_ticks = pkt.samples[index].time_ticks;
+                    priv->previous_ticks = sample.time_ticks;
                     continue;
                 }
 
-                uint32_t t1, t2;
-                t1 = pkt.samples[index].time_ticks;
-                t2 = priv->previous_ticks;
+                if (is_timestamp_valid(sample.time_ticks, priv->previous_ticks)) {
 
-                if (t1 != t2 && (
-                            (t1 < t2 && t2 - t1 > 0xFFFFFFFF >> 2) ||
-                            (t1 > t2 && t1 - t2 < 0xFFFFFFFF >> 2)
-                            )) {
+                    vec3f raw_accel, raw_gyro;
+                    /*
+                    Eigen::Vector3f vec3_gyro = vec3_from_gyro(sample.rot);
+                    Eigen::Vector3f vec3_accel = vec3_from_accel(sample.acc);
+                    */
+                    vec3f_from_vive_vec_accel(sample.acc, &raw_accel);
+                    vec3f_from_vive_vec_gyro(sample.rot, &raw_gyro);
                     printf("    sample[%d]:\n", index);
-
-                    vec3f_from_vive_vec_accel(pkt.samples[index].acc, &priv->raw_accel);
-                    printf("      acc[0]: %f\n", priv->raw_accel.x);
-                    printf("      acc[1]: %f\n", priv->raw_accel.y);
-                    printf("      acc[2]: %f\n", priv->raw_accel.z);
-
-                    vec3f_from_vive_vec_gyro(pkt.samples[index].rot, &priv->raw_gyro);
-                    printf("      gyro[0]: %f\n", priv->raw_gyro.x);
-                    printf("      gyro[1]: %f\n", priv->raw_gyro.y);
-                    printf("      gyro[2]: %f\n", priv->raw_gyro.z);
-
-                    printf("time_ticks: %u\n", pkt.samples[index].time_ticks);
-                    printf("seq: %u\n", pkt.samples[index].seq);
+                    printf("      acc (%f, %f, %f)\n", raw_accel.x, raw_accel.y, raw_accel.z);
+                    printf("      gyro (%f, %f, %f)\n", raw_gyro.x, raw_gyro.y, raw_gyro.z);
+                    printf("time_ticks: %u\n", sample.time_ticks);
+                    printf("seq: %u\n", sample.seq);
                     printf("\n");
 
-                    float dt = TICK_LEN / FREQ_48KHZ * (t1 - t2);
+                    float dt = TICK_LEN / FREQ_48KHZ * (sample.time_ticks - priv->previous_ticks);
 
-                    ofusion_update(&priv->sensor_fusion, dt, &priv->raw_gyro, &priv->raw_accel);
+                    ofusion_update(&priv->sensor_fusion, dt, raw_gyro, raw_accel);
 
                     priv->previous_ticks = pkt.samples[index].time_ticks;
                 }

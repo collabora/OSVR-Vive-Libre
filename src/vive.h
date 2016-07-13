@@ -89,7 +89,6 @@ typedef struct {
     hid_device* watchman_dongle_handle;
     hid_device* lighthouse_sensor_handle;
     fusion sensor_fusion;
-    vec3f raw_accel, raw_gyro;
     uint32_t previous_ticks;
 } vive_priv;
 
