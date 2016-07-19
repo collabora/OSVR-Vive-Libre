@@ -51,31 +51,6 @@ void vl_driver_close(vl_driver* priv) {
     free(priv);
 }
 
-/*
-static void dump_indexed_string(hid_device* device, int index)
-{
-    wchar_t wbuffer[512] = {0};
-    char buffer[1024] = {0};
-
-    int hret = hid_get_indexed_string(device, index, wbuffer, 511);
-
-    if(hret == 0){
-        wcstombs(buffer, wbuffer, sizeof(buffer));
-        printf("indexed string 0x%02x: '%s'\n", index, buffer);
-    }
-}
-
-static void dumpbin(const char* label, const unsigned char* data, int length)
-{
-    printf("%s:\n", label);
-    for(int i = 0; i < length; i++){
-        printf("%02x ", data[i]);
-        if((i % 16) == 15)
-            printf("\n");
-    }
-    printf("\n");
-}
-*/
 static void print_info_string(int (*fun)(hid_device*, wchar_t*, size_t), const char* what, hid_device* device)
 {
     wchar_t wbuffer[512] = {0};
@@ -155,7 +130,7 @@ vl_driver *vl_driver_open_device(int idx)
     if(!drv->watchman_dongle_device)
         goto cleanup;
 
-    // enable lighthouse
+    // TODO: find command to enable hmd light sensors, as "seen" in OpenVR
     //hret = hid_send_feature_report(priv->hmd_handle, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
     //printf("enable lighthouse magic: %d\n", hret);
 
@@ -226,11 +201,11 @@ void vl_driver_log_watchman(hid_device *dev) {
     int size = 0;
     unsigned char watchman_buffer[FEATURE_BUFFER_SIZE];
     while((size = hid_read(dev, watchman_buffer, FEATURE_BUFFER_SIZE)) > 0){
-        if(watchman_buffer[0] == 35){
+        if(watchman_buffer[0] == VL_MSG_WATCHMAN){
             vl_msg_watchman pkt;
             vl_msg_decode_watchman(&pkt, watchman_buffer, size);
             vl_msg_print_watchman(&pkt);
-        }else if (watchman_buffer[0] == 36) {
+        }else if (watchman_buffer[0] == VL_MSG_36) {
             // todo handle paket 36
         }else{
             printf("unhandled message type: %u\n", watchman_buffer[0]);
@@ -246,11 +221,12 @@ void vl_driver_log_hmd_light(hid_device* dev) {
     int size = 0;
     unsigned char lighthouse_buffer[FEATURE_BUFFER_SIZE];
     while((size = hid_read(dev, lighthouse_buffer, FEATURE_BUFFER_SIZE)) > 0){
-        if(lighthouse_buffer[0] == 37){
+        if(lighthouse_buffer[0] == VL_MSG_HMD_LIGHT){
             vl_msg_hmd_light pkt;
             vl_msg_decode_hmd_light(&pkt, lighthouse_buffer, size);
             vl_msg_print_hmd_light(&pkt);
-        } else if (lighthouse_buffer[0] == 33) {
+        } else if (lighthouse_buffer[0] == VL_MSG_CONTROLLER_LIGHT) {
+            // TODO: Before SteamVR is run, the device returns a controller light message wrongfully
             vl_msg_controller_light pkt;
             vl_msg_decode_controller_light(&pkt, lighthouse_buffer, size);
             vl_msg_print_controller_light(&pkt);
@@ -274,7 +250,6 @@ void vl_driver_log_hmd_imu(hid_device* dev) {
             vl_msg_print_hmd_imu(&pkt);
         }else{
             printf("unhandled message type: %u\n", buffer[0]);
-            //LOGE("unknown message type: %u", buffer[0]);
         }
     }
 
@@ -285,8 +260,8 @@ void vl_driver_log_hmd_imu(hid_device* dev) {
 
 bool is_timestamp_valid(uint32_t t1, uint32_t t2) {
     return t1 != t2 && (
-        (t1 < t2 && t2 - t1 > 0xFFFFFFFF >> 2) ||
-        (t1 > t2 && t1 - t2 < 0xFFFFFFFF >> 2)
+        (t1 < t2 && t2 - t1 > UINT32_MAX >> 2) ||
+        (t1 > t2 && t1 - t2 < UINT32_MAX >> 2)
     );
 }
 

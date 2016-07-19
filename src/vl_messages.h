@@ -5,6 +5,11 @@
 typedef enum
 {
     VL_MSG_HMD_IMU = 32,
+    VL_MSG_CONTROLLER_LIGHT = 33,
+    VL_MSG_WATCHMAN = 35,
+    VL_MSG_36 = 36,
+    VL_MSG_HMD_LIGHT = 37,
+
 } vl_message;
 
 inline static uint8_t read8(const unsigned char** buffer)
@@ -131,6 +136,8 @@ inline static void vl_msg_print_hmd_light(vl_msg_hmd_light* pkt) {
     printf("== hmd light sample ==\n");
     printf("  report_id: %u\n", pkt->report_id);
     for(int i = 0; i < 9; i++){
+        if (pkt->samples[i].time == UINT32_MAX)
+            continue;
         printf("     sensor_id[%d]: %u\n", i, pkt->samples[i].sensor_id);
         printf("      length[%d]: %d\n", i, pkt->samples[i].length);
         printf("      time[%d]: %zd\n", i, pkt->samples[i].time);
