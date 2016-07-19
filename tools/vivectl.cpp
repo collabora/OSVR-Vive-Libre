@@ -85,7 +85,7 @@ void send_controller_off() {
 }
 
 int main(int argc, char *argv[]) {
-    if ( argc < 2 ) {
+    if ( argc < 3 ) {
         print_usage();
     } else {
         // dump
