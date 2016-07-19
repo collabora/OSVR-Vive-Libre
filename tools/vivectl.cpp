@@ -19,6 +19,8 @@ bool compare(std::string str1, std::string str2) {
 
 void dump_controller() {
     vl_driver* drv = vl_driver_init();
+    if (drv == nullptr)
+        return;
     while(true)
         vl_driver_log_watchman(drv->watchman_dongle_device);
     vl_driver_close(drv);
@@ -26,6 +28,8 @@ void dump_controller() {
 
 void dump_hmd_imu() {
     vl_driver* drv = vl_driver_init();
+    if (drv == nullptr)
+        return;
     while(true)
         vl_driver_log_hmd_imu(drv->hmd_imu_device);
     vl_driver_close(drv);
@@ -33,6 +37,8 @@ void dump_hmd_imu() {
 
 void dump_hmd_light() {
     vl_driver* drv = vl_driver_init();
+    if (drv == nullptr)
+        return;
     while(true)
         vl_driver_log_hmd_light(drv->hmd_light_sensor_device);
     vl_driver_close(drv);
@@ -41,6 +47,8 @@ void dump_hmd_light() {
 void send_hmd_on() {
     int hret = 0;
     vl_driver* drv = vl_driver_init();
+    if (drv == nullptr)
+        return;
     printf("hmd on.\n");
 
     // turn the display on
@@ -52,6 +60,8 @@ void send_hmd_on() {
 void send_hmd_off() {
     int hret = 0;
     vl_driver* drv = vl_driver_init();
+    if (drv == nullptr)
+        return;
     printf("hmd off.\n");
 
     // turn the display off
@@ -68,6 +78,8 @@ void send_controller_off() {
     int hret = 0;
     printf("controller off.\n");
     vl_driver* drv = vl_driver_init();
+    if (drv == nullptr)
+        return;
     hret = hid_send_feature_report(drv->watchman_dongle_device, vive_controller_power_off, sizeof(vive_controller_power_off));
     vl_driver_close(drv);
 }
