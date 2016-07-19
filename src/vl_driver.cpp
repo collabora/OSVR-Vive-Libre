@@ -20,7 +20,7 @@ vl_driver* vl_driver_init() {
     // Probe for devices
     std::vector<int> paths = vl_driver_get_device_paths(HTC_ID, VIVE_HMD);
     if(paths.size() <= 0) {
-        printf("failed to probe devices\n");
+        fprintf(stderr, "failed to probe devices\n");
         return NULL;
     }
 
@@ -36,7 +36,7 @@ vl_driver* vl_driver_init() {
     }
 
     if(!hmd){
-        printf("failed to open device\n");
+        fprintf(stderr, "failed to open device\n");
         return NULL;
     }
 
