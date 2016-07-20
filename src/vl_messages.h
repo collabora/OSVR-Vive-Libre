@@ -48,7 +48,7 @@ typedef struct
 {
     int16_t acc[3];
     int16_t rot[3];
-    uint32_t	time_ticks;
+    uint32_t time_ticks;
     uint8_t seq;
 } vl_imu_sample;
 
