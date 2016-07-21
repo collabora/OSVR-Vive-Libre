@@ -7,8 +7,7 @@
 
 /* Math */
 
-#ifndef OMATH_H
-#define OMATH_H
+#pragma once
 
 #include <math.h>
 
@@ -75,5 +74,3 @@ typedef struct {
 void ofq_init(filter_queue* me, int size);
 void ofq_add(filter_queue* me, const vec3f* vec);
 void ofq_get_mean(const filter_queue* me, vec3f* vec);
-
-#endif

@@ -7,8 +7,7 @@
 
 /* Sensor Fusion */
 
-#ifndef FUSION_H
-#define FUSION_H
+#pragma once
 
 #include "omath.h"
 #include <Eigen/Geometry>
@@ -39,5 +38,3 @@ typedef struct {
 
 void ofusion_init(vl_fusion* me);
 void ofusion_update(vl_fusion* me, float dt, vec3f vec3_gyro, vec3f vec3_accel);
-
-#endif
