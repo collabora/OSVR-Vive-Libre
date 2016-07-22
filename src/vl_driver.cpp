@@ -20,7 +20,7 @@ vl_driver* vl_driver_init() {
     // Probe for devices
     std::vector<int> paths = vl_driver_get_device_paths(HTC_ID, VIVE_HMD);
     if(paths.size() <= 0) {
-        fprintf(stderr, "failed to probe devices\n");
+        fprintf(stderr, "No connected VIVE found.\n");
         return NULL;
     }
 
@@ -71,6 +71,23 @@ void print_device_info(hid_device* dev) {
 }
 
 
+static char* _hid_to_unix_path(char* path)
+{
+       const int len = 4;
+       char bus [len];
+       char dev [len];
+       char *result = new char[20 + 1];
+
+       sprintf (bus, "%.*s\n", len, path);
+       sprintf (dev, "%.*s\n", len, path + 5);
+
+       sprintf (result, "/dev/bus/usb/%03d/%03d",
+               (int)strtol(bus, NULL, 16),
+               (int)strtol(dev, NULL, 16));
+       return result;
+}
+
+
 static hid_device* open_device_idx(int manufacturer, int product, int iface, int iface_tot, int device_index)
 {
     struct hid_device_info* devs = hid_enumerate(manufacturer, product);
@@ -83,8 +100,18 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
     printf("Opening %04x:%04x %d/%d\n", manufacturer, product, iface+1, iface_tot);
 
     while (cur_dev) {
-        if(idx == device_index && iface == iface_cur)
+        if(idx == device_index && iface == iface_cur) {
             ret = hid_open_path(cur_dev->path);
+
+            if (ret == NULL) {
+                char* path = _hid_to_unix_path(cur_dev->path);
+                printf("Opening failed. Do you have the correct udev rules in place?\nTry: sudo chmod 666 %s\n", path, path);
+                free(path);
+                hid_free_enumeration(devs);
+                return NULL;
+            }
+
+        }
         cur_dev = cur_dev->next;
         iface_cur++;
         if(iface_cur >= iface_tot){
