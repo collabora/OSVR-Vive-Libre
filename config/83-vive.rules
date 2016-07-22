@@ -1,0 +1,7 @@
+# vive-libre / OpenHMD
+SUBSYSTEM=="usb", ATTR{idVendor}=="0bb4", TAG+="uaccess" # HTC
+SUBSYSTEM=="usb", ATTR{idVendor}=="28de", TAG+="uaccess" # Valve
+
+# OpenVR (SteamVR) / OSVR-HTC-Vive
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0bb4", TAG+="uaccess" # HTC
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="28de", TAG+="uaccess" # Valve
