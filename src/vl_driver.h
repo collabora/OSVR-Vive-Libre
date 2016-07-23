@@ -19,9 +19,9 @@
 #define VIVE_WATCHMAN_DONGLE     0x2101
 #define VIVE_LIGHTHOUSE_FPGA_RX  0x2000
 
-#define TICK_LEN (1.0f / 1000.0f) // 1000 Hz ticks
+#define TICK_LEN 1000.0f // 1000 Hz ticks
 
-#define FREQ_48KHZ 48000.0f
+#define FREQ_48KHZ 1.0 / 48000.0f
 
 typedef struct {
     hid_device* hmd_device;

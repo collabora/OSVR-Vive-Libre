@@ -9,7 +9,6 @@ typedef enum
     VL_MSG_WATCHMAN = 35,
     VL_MSG_36 = 36,
     VL_MSG_HMD_LIGHT = 37,
-
 } vl_message;
 
 inline static uint8_t read8(const unsigned char** buffer)
@@ -17,7 +16,6 @@ inline static uint8_t read8(const unsigned char** buffer)
     uint8_t ret = **buffer;
     *buffer += 1;
     return ret;
-
 }
 
 inline static int16_t read16(const unsigned char** buffer)
