@@ -97,7 +97,7 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
     int iface_cur = 0;
     hid_device* ret = NULL;
 
-    printf("Opening %04x:%04x %d/%d\n", manufacturer, product, iface+1, iface_tot);
+    // printf("Opening %04x:%04x %d/%d\n", manufacturer, product, iface+1, iface_tot);
 
     while (cur_dev) {
         if(idx == device_index && iface == iface_cur) {
@@ -126,7 +126,7 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
         return NULL;
     }
 
-    print_device_info(ret);
+    // print_device_info(ret);
 
     return ret;
 }
@@ -252,7 +252,8 @@ void vl_driver_log_hmd_light(hid_device* dev) {
         if(lighthouse_buffer[0] == VL_MSG_HMD_LIGHT){
             vl_msg_hmd_light pkt;
             vl_msg_decode_hmd_light(&pkt, lighthouse_buffer, size);
-            vl_msg_print_hmd_light(&pkt);
+            //vl_msg_print_hmd_light(&pkt);
+            vl_msg_print_hmd_light_csv(&pkt);
         } else if (lighthouse_buffer[0] == VL_MSG_CONTROLLER_LIGHT) {
             // TODO: Before SteamVR is run, the device returns a controller light message wrongfully
             vl_msg_controller_light pkt;
@@ -267,6 +268,7 @@ void vl_driver_log_hmd_light(hid_device* dev) {
         printf("error reading from device\n");
     }
 }
+
 
 void vl_driver_log_hmd_imu(hid_device* dev) {
     int size = 0;

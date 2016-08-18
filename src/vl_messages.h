@@ -143,6 +143,12 @@ inline static void vl_msg_print_hmd_light(vl_msg_hmd_light* pkt) {
     }
 }
 
+inline static void vl_msg_print_hmd_light_csv(vl_msg_hmd_light* pkt) {
+    for(int i = 0; i < 9; i++){
+        printf("%zd, %u, %d\n", pkt->samples[i].time, pkt->samples[i].sensor_id, pkt->samples[i].length);
+    }
+}
+
 
 typedef struct
 {
@@ -174,6 +180,10 @@ inline static void vl_msg_print_controller_light(vl_msg_controller_light* pkt) {
     printf("== controller light sample ==\n");
     printf("  report_id: %u\n", pkt->report_id);
     for(int i = 0; i < 7; i++){
+
+        if (pkt->samples[i].time == UINT32_MAX)
+            continue;
+
         printf("     sensor_id[%d]: %u\n", i, pkt->samples[i].sensor_id);
         printf("      length[%d]: %d\n", i, pkt->samples[i].length);
         printf("      time[%d]: %zd\n", i, pkt->samples[i].time);
