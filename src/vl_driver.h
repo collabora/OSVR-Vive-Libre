@@ -33,7 +33,7 @@ typedef struct {
 } vl_driver;
 
 vl_driver* vl_driver_init();
-void vl_driver_close(vl_driver* priv);
+void vl_driver_close(vl_driver* drv);
 std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id);
 vl_driver* vl_driver_open_device(int idx);
 
@@ -42,4 +42,4 @@ void vl_driver_log_hmd_light(hid_device *dev);
 void vl_driver_log_hmd_imu(hid_device* dev);
 
 
-Eigen::Quaternionf imu_to_pose(vl_driver* priv);
+Eigen::Quaternionf imu_to_pose(vl_driver* drv);

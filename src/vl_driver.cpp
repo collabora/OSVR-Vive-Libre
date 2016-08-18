@@ -43,12 +43,12 @@ vl_driver* vl_driver_init() {
     return hmd;
 }
 
-void vl_driver_close(vl_driver* priv) {
-    hid_close(priv->hmd_device);
-    hid_close(priv->hmd_imu_device);
-    hid_close(priv->watchman_dongle_device);
-    hid_close(priv->hmd_light_sensor_device);
-    free(priv);
+void vl_driver_close(vl_driver* drv) {
+    hid_close(drv->hmd_device);
+    hid_close(drv->hmd_imu_device);
+    hid_close(drv->watchman_dongle_device);
+    hid_close(drv->hmd_light_sensor_device);
+    free(drv);
 }
 
 static void print_info_string(int (*fun)(hid_device*, wchar_t*, size_t), const char* what, hid_device* device)
@@ -158,7 +158,7 @@ vl_driver *vl_driver_open_device(int idx)
         goto cleanup;
 
     // TODO: find command to enable hmd light sensors, as "seen" in OpenVR
-    //hret = hid_send_feature_report(priv->hmd_handle, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
+    //hret = hid_send_feature_report(drv->hmd_device, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
     //printf("enable lighthouse magic: %d\n", hret);
 
     ofusion_init(&drv->sensor_fusion);
