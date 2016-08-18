@@ -115,7 +115,7 @@ typedef struct
 inline static bool vl_msg_decode_hmd_light(vl_msg_hmd_light* pkt, const unsigned char* buffer, int size)
 {
     if(size != 64){
-        printf("invalid vive sensor packet size (expected 52 but got %d)\n", size);
+        printf("invalid vive sensor packet size (expected 64 but got %d)\n", size);
         return false;
     }
 
