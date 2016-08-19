@@ -343,7 +343,7 @@ Eigen::Quaternionf imu_to_pose(vl_driver* drv)
                     printf("seq: %u\n", sample.seq);
                     printf("\n");
 
-                    float dt = TICK_LEN * (sample.time_ticks - drv->previous_ticks) / FREQ_48KHZ;
+                    float dt = FREQ_48MHZ * (sample.time_ticks - drv->previous_ticks);
 
                     ofusion_update(&drv->sensor_fusion, dt, raw_gyro, raw_accel);
 
