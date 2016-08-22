@@ -192,35 +192,34 @@ std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id)
 }
 
 #define VL_GRAVITY_EARTH 9.81
-#define VL_POW_2_15 32768.0
+#define VL_POW_2_M13 4.0/32768.0 // pow(2, -13)
+#define VL_POW_2_M12 8.0/32768.0 // pow(2, -12)
+#define VL_ACCEL_FACTOR VL_GRAVITY_EARTH * VL_POW_2_M13
 
 void vec3f_from_vive_vec_accel(const int16_t* smp, vec3f* out_vec)
 {
-    float factor = VL_GRAVITY_EARTH * pow(2, -13); // 4/32768 = 2^-13
-    out_vec->x = (float)smp[0] * factor;
-    out_vec->y = (float)smp[1] * factor;
-    out_vec->z = (float)smp[2] * factor;
+    out_vec->x = (float)smp[0] * VL_ACCEL_FACTOR;
+    out_vec->y = (float)smp[1] * VL_ACCEL_FACTOR;
+    out_vec->z = (float)smp[2] * VL_ACCEL_FACTOR;
 }
 
 Eigen::Vector3f vec3_from_accel(const int16_t* smp)
 {
-    float factor = VL_GRAVITY_EARTH * pow(2, -13); // 4/32768 = 2^-13
     Eigen::Vector3f sample(smp[0], smp[1], smp[2]);
-    return sample * factor;
+    return sample * VL_ACCEL_FACTOR;
 }
 
 Eigen::Vector3f vec3_from_gyro(const int16_t* smp)
 {
     Eigen::Vector3f sample(smp[0], smp[1], smp[2]);
-    return sample * pow(2, -12); // 8/32768 = 2^-12
+    return sample * VL_POW_2_M12; // 8/32768 = 2^-12
 }
 
 void vec3f_from_vive_vec_gyro(const int16_t* smp, vec3f* out_vec)
 {
-    float factor = pow(2, -12);
-    out_vec->x = (float)smp[0] * factor;
-    out_vec->y = (float)smp[1] * factor;
-    out_vec->z = (float)smp[2] * factor;
+    out_vec->x = (float)smp[0] * VL_POW_2_M12;
+    out_vec->y = (float)smp[1] * VL_POW_2_M12;
+    out_vec->z = (float)smp[2] * VL_POW_2_M12;
 }
 
 
