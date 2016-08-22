@@ -243,7 +243,7 @@ void vl_driver_log_watchman(hid_device *dev) {
     }
 
     if(size < 0){
-        printf("error reading from device/n");
+        printf("error reading from device\n");
     }
 }
 
