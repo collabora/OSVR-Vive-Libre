@@ -29,8 +29,8 @@ static inline OSVR_Quaternion openhmd_to_osvr_quaternion(quatf in) {
 static inline OSVR_Quaternion eigen_to_osvr_quaternion(Eigen::Quaternionf in) {
     OSVR_Quaternion quat;
     quat.data[0] = in.w();
-    quat.data[1] = in.x();
-    quat.data[2] = in.y();
-    quat.data[3] = in.z();
+    quat.data[1] = -in.x();
+    quat.data[2] = -in.y();
+    quat.data[3] = -in.z();
     return quat;
 }
