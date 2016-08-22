@@ -76,28 +76,28 @@ struct vive_firmware_version_report {
 
 struct vive_headset_imu_sample {
 	__le16 acc[3];
-	__le16 gyro[3];
-	__le32 time;
+	__le16 rot[3];
+	__le32 time_ticks;
 	__u8 seq;
 } __attribute__((packed));
 
 struct vive_headset_imu_report {
-	__u8 id;
-	struct vive_headset_imu_sample sample[3];
+	__u8 report_id;
+	struct vive_headset_imu_sample samples[3];
 } __attribute__((packed));
 
 #define VIVE_HEADSET_LIGHTHOUSE_PULSE_REPORT1_ID	0x21
 
 struct vive_headset_lighthouse_pulse1 {
-	__le16 id;
-	__le16 duration;
-	__le32 timestamp;
+	__le16 sensor_id;
+	__le16 length;
+	__le32 time;
 } __attribute__((packed));
 
 struct vive_headset_lighthouse_pulse_report1 {
-	__u8 id;
-	struct vive_headset_lighthouse_pulse1 pulse[7];
-	__u8 reserved;
+	__u8 report_id;
+	struct vive_headset_lighthouse_pulse1 samples[7];
+	__u8 unknown;
 } __attribute__((packed));
 
 #define VIVE_CONTROLLER_REPORT1_ID			0x23
@@ -146,10 +146,10 @@ struct vive_controller_ping_message {
 } __attribute__((packed));
 
 struct vive_controller_message {
-	__u8 timestamp_hi;
-	__u8 type_hi;
-	__u8 timestamp_lo;
-	__u8 type_lo;
+	__u8 time1;
+	__u8 type1;
+	__u8 time2;
+	__u8 type2;
 	union {
 		struct vive_controller_analog_trigger_message analog_trigger;
 		struct vive_controller_button_message button;
@@ -162,7 +162,7 @@ struct vive_controller_message {
 } __attribute__((packed));
 
 struct vive_controller_report1 {
-	__u8 id;
+	__u8 report_id;
 	struct vive_controller_message message;
 } __attribute__((packed));
 
@@ -176,14 +176,14 @@ struct vive_controller_report2 {
 #define VIVE_HEADSET_LIGHTHOUSE_PULSE_REPORT2_ID	0x25
 
 struct vive_headset_lighthouse_pulse2 {
-	__u8 id;
-	__le16 duration;
-	__le32 timestamp;
+	__u8 sensor_id;
+	__le16 length;
+	__le32 time;
 } __attribute__((packed));
 
 struct vive_headset_lighthouse_pulse_report2 {
-	__u8 id;
-	struct vive_headset_lighthouse_pulse2 pulse[9];
+	__u8 report_id;
+	struct vive_headset_lighthouse_pulse2 samples[9];
 } __attribute__((packed));
 
 #define VIVE_CONTROLLER_DISCONNECT_REPORT_ID		0x26
