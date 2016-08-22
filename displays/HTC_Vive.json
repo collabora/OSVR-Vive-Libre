@@ -7,7 +7,7 @@
          "vendor" : "HTC"
       },
       "distortion" : {
-         "rgb_point_samples_external_file" : "HTC_Vive_meshdata.json"
+         "rgb_point_samples_external_file" : "/home/bmonkey/workspace/vr/OSVR-Vive-Libre/displays/HTC_Vive_meshdata.json"
       },
       "eyes" : [
          {

@@ -3,5 +3,6 @@
     "comment": "ViveDisplayExtractor should generate a HTC_Vive.json, referred to below, containing an absolute path to displays/HTC_Vive_meshdata.json",
     "display": "displays/HTC_Vive.json",
 
-    "renderManagerConfig": "/usr/share/osvrcore/sample-configs/renderManager.direct.landscape.json"
+    "renderManagerConfig": "/usr/share/osvrcore/sample-configs/renderManager.extended.landscape.json"
 }
+
