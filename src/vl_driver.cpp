@@ -301,7 +301,7 @@ int get_lowest_index(uint8_t s0, uint8_t s1, uint8_t s2) {
          :                              0;
 }
 
-Eigen::Quaternionf imu_to_pose(vl_driver* drv)
+Eigen::Quaternionf vl_imu_to_pose(vl_driver* drv)
 {
     int size = 0;
     unsigned char buffer[FEATURE_BUFFER_SIZE];
@@ -310,7 +310,6 @@ Eigen::Quaternionf imu_to_pose(vl_driver* drv)
         if(buffer[0] == VL_MSG_HMD_IMU){
             vl_msg_hmd_imu pkt;
             vl_msg_decode_hmd_imu(&pkt, buffer, size);
-            //vl_msg_print_hmd_imu(&pkt);
 
             int li = get_lowest_index(
                         pkt.samples[0].seq,
@@ -336,12 +335,6 @@ Eigen::Quaternionf imu_to_pose(vl_driver* drv)
                     */
                     vec3f_from_vive_vec_accel(sample.acc, &raw_accel);
                     vec3f_from_vive_vec_gyro(sample.rot, &raw_gyro);
-                    printf("    sample[%d]:\n", index);
-                    printf("      acc (%f, %f, %f)\n", raw_accel.x, raw_accel.y, raw_accel.z);
-                    printf("      gyro (%f, %f, %f)\n", raw_gyro.x, raw_gyro.y, raw_gyro.z);
-                    printf("time_ticks: %u\n", sample.time_ticks);
-                    printf("seq: %u\n", sample.seq);
-                    printf("\n");
 
                     float dt = FREQ_48MHZ * (sample.time_ticks - drv->previous_ticks);
 

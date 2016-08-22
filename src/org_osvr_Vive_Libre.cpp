@@ -79,7 +79,7 @@ class TrackerDevice {
         OSVR_PoseState pose;
         osvrPose3SetIdentity(&pose);
 
-        pose.rotation = eigen_to_osvr_quaternion(imu_to_pose(vive));
+        pose.rotation = eigen_to_osvr_quaternion(vl_imu_to_pose(vive));
         osvrDeviceTrackerSendPose(m_dev, m_tracker, &pose, 0);
 
         return OSVR_RETURN_SUCCESS;
