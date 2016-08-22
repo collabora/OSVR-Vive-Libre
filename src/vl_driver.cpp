@@ -214,13 +214,13 @@ std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id)
 #define VL_POW_2_M12 8.0/32768.0 // pow(2, -12)
 #define VL_ACCEL_FACTOR VL_GRAVITY_EARTH * VL_POW_2_M13
 
-Eigen::Vector3d vec3_from_accel(const int16_t* smp)
+Eigen::Vector3d vec3_from_accel(const __le16* smp)
 {
     Eigen::Vector3d sample(smp[0], smp[1], smp[2]);
     return sample * VL_ACCEL_FACTOR;
 }
 
-Eigen::Vector3d vec3_from_gyro(const int16_t* smp)
+Eigen::Vector3d vec3_from_gyro(const __le16* smp)
 {
     Eigen::Vector3d sample(smp[0], smp[1], smp[2]);
     return sample * VL_POW_2_M12; // 8/32768 = 2^-12
@@ -232,7 +232,7 @@ void vl_driver_log_watchman(hid_device *dev) {
     unsigned char watchman_buffer[FEATURE_BUFFER_SIZE];
     while((size = hid_read(dev, watchman_buffer, FEATURE_BUFFER_SIZE)) > 0){
         if(watchman_buffer[0] == VL_MSG_WATCHMAN){
-            vl_msg_watchman pkt;
+            vive_controller_report1 pkt;
             vl_msg_decode_watchman(&pkt, watchman_buffer, size);
             vl_msg_print_watchman(&pkt);
         }else if (watchman_buffer[0] == VL_MSG_36) {
@@ -252,13 +252,13 @@ void vl_driver_log_hmd_light(hid_device* dev) {
     unsigned char lighthouse_buffer[FEATURE_BUFFER_SIZE];
     while((size = hid_read(dev, lighthouse_buffer, FEATURE_BUFFER_SIZE)) > 0){
         if(lighthouse_buffer[0] == VL_MSG_HMD_LIGHT){
-            vl_msg_hmd_light pkt;
+            vive_headset_lighthouse_pulse_report2 pkt;
             vl_msg_decode_hmd_light(&pkt, lighthouse_buffer, size);
             //vl_msg_print_hmd_light(&pkt);
             vl_msg_print_hmd_light_csv(&pkt);
         } else if (lighthouse_buffer[0] == VL_MSG_CONTROLLER_LIGHT) {
             // TODO: Before SteamVR is run, the device returns a controller light message wrongfully
-            vl_msg_controller_light pkt;
+            vive_headset_lighthouse_pulse_report1 pkt;
             vl_msg_decode_controller_light(&pkt, lighthouse_buffer, size);
             vl_msg_print_controller_light(&pkt);
         }else{
@@ -277,7 +277,7 @@ void vl_driver_log_hmd_imu(hid_device* dev) {
     unsigned char buffer[FEATURE_BUFFER_SIZE];
     while((size = hid_read(dev, buffer, FEATURE_BUFFER_SIZE)) > 0){
         if(buffer[0] == VL_MSG_HMD_IMU){
-            vl_msg_hmd_imu pkt;
+            vive_headset_imu_report pkt;
             vl_msg_decode_hmd_imu(&pkt, buffer, size);
             vl_msg_print_hmd_imu(&pkt);
         }else{
@@ -303,7 +303,7 @@ int get_lowest_index(uint8_t s0, uint8_t s1, uint8_t s2) {
          :                              0;
 }
 
-void vl_update_imu(vl_fusion* fusion, vl_imu_sample sample, float dt) {
+void vl_update_imu(vl_fusion* fusion, vive_headset_imu_sample sample, float dt) {
     Eigen::Vector3d vec3_gyro = vec3_from_gyro(sample.rot);
     Eigen::Vector3d vec3_accel = vec3_from_accel(sample.acc);
     vl_fusion_update(fusion, dt, vec3_gyro, vec3_accel);
@@ -317,7 +317,7 @@ void vl_driver_update_pose(vl_driver* drv)
     while((size = hid_read(drv->hmd_imu_device, buffer, FEATURE_BUFFER_SIZE)) > 0){
         if(buffer[0] == VL_MSG_HMD_IMU){
 
-            vl_msg_hmd_imu pkt;
+            vive_headset_imu_report pkt;
             vl_msg_decode_hmd_imu(&pkt, buffer, size);
 
             int li = get_lowest_index(
@@ -328,7 +328,7 @@ void vl_driver_update_pose(vl_driver* drv)
             for (int offset = 0; offset < 3; offset++) {
                 int index = (li + offset) % 3;
 
-                vl_imu_sample sample = pkt.samples[index];
+                vive_headset_imu_sample sample = pkt.samples[index];
 
                 if (drv->previous_ticks == 0) {
                     drv->previous_ticks = sample.time_ticks;

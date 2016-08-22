@@ -27,6 +27,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "hid-reports.h"
 
 typedef enum
 {
@@ -68,21 +69,7 @@ inline static uint32_t uread32(const unsigned char** buffer)
     return ret;
 }
 
-typedef struct
-{
-    int16_t acc[3];
-    int16_t rot[3];
-    uint32_t time_ticks;
-    uint8_t seq;
-} vl_imu_sample;
-
-typedef struct
-{
-    uint8_t report_id;
-    vl_imu_sample samples[3];
-} vl_msg_hmd_imu;
-
-inline static bool vl_msg_decode_hmd_imu(vl_msg_hmd_imu* pkt, const unsigned char* buffer, int size)
+inline static bool vl_msg_decode_hmd_imu(vive_headset_imu_report* pkt, const unsigned char* buffer, int size)
 {
     if(size != 52){
         printf("invalid vive sensor packet size (expected 52 but got %d)\n", size);
@@ -105,7 +92,7 @@ inline static bool vl_msg_decode_hmd_imu(vl_msg_hmd_imu* pkt, const unsigned cha
     return true;
 }
 
-inline static void vl_msg_print_hmd_imu(vl_msg_hmd_imu* pkt) {
+inline static void vl_msg_print_hmd_imu(vive_headset_imu_report* pkt) {
     printf("== imu sample ==\n");
     printf("  report_id: %u\n", pkt->report_id);
     for(int i = 0; i < 3; i++){
@@ -125,20 +112,7 @@ inline static void vl_msg_print_hmd_imu(vl_msg_hmd_imu* pkt) {
     }
 }
 
-typedef struct
-{
-    uint8_t sensor_id;
-    uint16_t length;
-    uint32_t time;
-} vl_light_sample;
-
-typedef struct
-{
-    uint8_t report_id;
-    vl_light_sample samples[9];
-} vl_msg_hmd_light;
-
-inline static bool vl_msg_decode_hmd_light(vl_msg_hmd_light* pkt, const unsigned char* buffer, int size)
+inline static bool vl_msg_decode_hmd_light(vive_headset_lighthouse_pulse_report2* pkt, const unsigned char* buffer, int size)
 {
     if(size != 64){
         printf("invalid vive sensor packet size (expected 64 but got %d)\n", size);
@@ -156,7 +130,7 @@ inline static bool vl_msg_decode_hmd_light(vl_msg_hmd_light* pkt, const unsigned
     return true;
 }
 
-inline static void vl_msg_print_hmd_light(vl_msg_hmd_light* pkt) {
+inline static void vl_msg_print_hmd_light(vive_headset_lighthouse_pulse_report2* pkt) {
     printf("== hmd light sample ==\n");
     printf("  report_id: %u\n", pkt->report_id);
     for(int i = 0; i < 9; i++){
@@ -169,21 +143,13 @@ inline static void vl_msg_print_hmd_light(vl_msg_hmd_light* pkt) {
     }
 }
 
-inline static void vl_msg_print_hmd_light_csv(vl_msg_hmd_light* pkt) {
+inline static void vl_msg_print_hmd_light_csv(vive_headset_lighthouse_pulse_report2* pkt) {
     for(int i = 0; i < 9; i++){
         printf("%zd, %u, %d\n", pkt->samples[i].time, pkt->samples[i].sensor_id, pkt->samples[i].length);
     }
 }
 
-
-typedef struct
-{
-    uint8_t report_id;
-    vl_light_sample samples[7];
-    uint8_t unknown;
-} vl_msg_controller_light;
-
-inline static bool vl_msg_decode_controller_light(vl_msg_controller_light* pkt, const unsigned char* buffer, int size)
+inline static bool vl_msg_decode_controller_light(vive_headset_lighthouse_pulse_report1* pkt, const unsigned char* buffer, int size)
 {
     if(size != 58){
         printf("invalid vive sensor packet size (expected 58 but got %d)\n", size);
@@ -193,7 +159,7 @@ inline static bool vl_msg_decode_controller_light(vl_msg_controller_light* pkt, 
     pkt->report_id = read8(&buffer);
 
     for(int j = 0; j < 7; j++){
-        pkt->samples[j].sensor_id = read8(&buffer);
+        pkt->samples[j].sensor_id = read16(&buffer);
         pkt->samples[j].length = read16(&buffer);
         pkt->samples[j].time = uread32(&buffer);
     }
@@ -202,15 +168,16 @@ inline static bool vl_msg_decode_controller_light(vl_msg_controller_light* pkt, 
     return true;
 }
 
-inline static void vl_msg_print_controller_light(vl_msg_controller_light* pkt) {
+inline static void vl_msg_print_controller_light(vive_headset_lighthouse_pulse_report1* pkt) {
     printf("== controller light sample ==\n");
     printf("  report_id: %u\n", pkt->report_id);
     for(int i = 0; i < 7; i++){
 
-        if (pkt->samples[i].time == UINT32_MAX)
-            continue;
+        if (pkt->samples[i].sensor_id == 0xffff)
+            // This is not a continue because there is never any sample after that.
+            break;
 
-        printf("     sensor_id[%d]: %u\n", i, pkt->samples[i].sensor_id);
+        printf("     sensor_id[%d]: %hd\n", i, pkt->samples[i].sensor_id);
         printf("      length[%d]: %d\n", i, pkt->samples[i].length);
         printf("      time[%d]: %zd\n", i, pkt->samples[i].time);
         printf("\n");
@@ -218,17 +185,7 @@ inline static void vl_msg_print_controller_light(vl_msg_controller_light* pkt) {
     printf("unknown: %u\n", pkt->unknown);
 }
 
-typedef struct
-{
-    uint8_t report_id;
-    uint8_t time1;
-    uint8_t type1;
-    uint8_t time2;
-    uint8_t type2;
-    uint8_t pressed_buttons;
-} vl_msg_watchman;
-
-inline static bool vl_msg_decode_watchman(vl_msg_watchman* pkt, const unsigned char* buffer, int size)
+inline static bool vl_msg_decode_watchman(vive_controller_report1* pkt, const unsigned char* buffer, int size)
 {
     if(size != 30){
         printf("invalid vive sensor packet size (expected 30 but got %d)\n", size);
@@ -236,16 +193,16 @@ inline static bool vl_msg_decode_watchman(vl_msg_watchman* pkt, const unsigned c
     }
 
     pkt->report_id = buffer[0];
-    pkt->time1 = buffer[1];
-    pkt->type1 = buffer[2];
-    pkt->time2 = buffer[3];
-    pkt->type2 = buffer[4];
-    pkt->pressed_buttons = buffer[5];
+    pkt->message.time1 = buffer[1];
+    pkt->message.type1 = buffer[2];
+    pkt->message.time2 = buffer[3];
+    pkt->message.type2 = buffer[4];
+    memcpy(&pkt->message.unknown, &buffer[5], sizeof(pkt->message.unknown));
 
     return true;
 }
 
-inline static void vl_msg_print_watchman(vl_msg_watchman * pkt) {
+inline static void vl_msg_print_watchman(vive_controller_report1 * pkt) {
     /*
     printf("vive watchman sample:\n");
     printf("  report_id: %u\n", pkt->report_id);
@@ -255,15 +212,9 @@ inline static void vl_msg_print_watchman(vl_msg_watchman * pkt) {
     printf("  type2: %d\n", pkt->type2);
     */
 
-    printf("type %d %d buttons: %d\n", pkt->type1, pkt->type2, pkt->pressed_buttons);
+    vive_controller_message* msg = &pkt->message;
+    printf("type %d %d buttons: %d\n", msg->type1, msg->type2, msg->unknown);
 }
-
-typedef struct
-{
-    uint8_t report_id;
-    uint8_t command;
-    uint8_t length;
-} vl_msg_controller_command;
 
 
 /*
