@@ -4,6 +4,7 @@ Makefile
 cmake_install.cmake
 com_osvr_Vive_Libre_json.h
 lib64/
+lib/
 org_osvr_example_Tracker_json.h
 CMakeLists.txt.user
 testbin
