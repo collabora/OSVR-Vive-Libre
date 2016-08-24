@@ -115,6 +115,11 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
     int iface_cur = 0;
     hid_device* ret = NULL;
 
+    if (!devs) {
+        vl_error("No hid devices found.");
+        return NULL;
+    }
+
     // printf("Opening %04x:%04x %d/%d\n", manufacturer, product, iface+1, iface_tot);
 
     while (cur_dev) {
@@ -138,6 +143,11 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
         }
     }
     hid_free_enumeration(devs);
+
+    if (!ret) {
+        fprintf(stderr, "Couldn’t find device %04d:%04d interface %d, check that it is plugged in.", manufacturer, product, iface);
+        return NULL;
+    }
 
     if(hid_set_nonblocking(ret, 1) == -1){
         vl_error("failed to set non-blocking on device.");
