@@ -159,7 +159,8 @@ inline static bool vl_msg_decode_controller_light(vive_headset_lighthouse_pulse_
     pkt->report_id = read8(&buffer);
 
     for(int j = 0; j < 7; j++){
-        pkt->samples[j].sensor_id = read16(&buffer);
+        pkt->samples[j].sensor_id = read8(&buffer);
+        pkt->samples[j].type = read8(&buffer);
         pkt->samples[j].length = read16(&buffer);
         pkt->samples[j].time = uread32(&buffer);
     }
@@ -173,7 +174,7 @@ inline static void vl_msg_print_controller_light(vive_headset_lighthouse_pulse_r
     printf("  report_id: %u\n", pkt->report_id);
     for(int i = 0; i < 7; i++){
 
-        if (pkt->samples[i].sensor_id == 0xffff)
+        if (pkt->samples[i].type == 0xff)
             // This is not a continue because there is never any sample after that.
             break;
 

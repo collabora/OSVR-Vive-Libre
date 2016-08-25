@@ -89,7 +89,8 @@ struct vive_headset_imu_report {
 #define VIVE_HEADSET_LIGHTHOUSE_PULSE_REPORT1_ID	0x21
 
 struct vive_headset_lighthouse_pulse1 {
-	__le16 sensor_id;
+	__u8 sensor_id;
+	__u8 type;
 	__le16 length;
 	__le32 time;
 } __attribute__((packed));
