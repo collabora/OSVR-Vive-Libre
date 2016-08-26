@@ -33,6 +33,7 @@ osvr_convert_json(com_osvr_Vive_json
     "${CMAKE_CURRENT_BINARY_DIR}/com_osvr_Vive_json.h")
 
 set(SOURCES
+    src/hidraw.h
     src/vl_driver.cpp
     src/vl_driver.h
     src/vl_fusion.cpp
@@ -40,13 +41,15 @@ set(SOURCES
     src/vl_magic.h
     src/vl_messages.h
     src/vl_controller.h
+    src/vl_config.h
+    src/vl_config.cpp
     src/vl_hmd.h
     src/vl_math.h
     src/omath.cpp
     src/omath.h)
 
 add_library(vive-libre SHARED ${SOURCES})
-target_link_libraries(vive-libre hidapi-libusb)
+target_link_libraries(vive-libre hidapi-libusb z)
 
 set(OSVR_PLUGIN_SOURCES
     src/org_osvr_Vive_Libre.cpp

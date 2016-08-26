@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string>
 #include "vl_driver.h"
+#include "vl_config.h"
 
 
 void print_usage() {
@@ -57,6 +58,20 @@ void send_hmd_on() {
     vl_driver_close(drv);
 }
 
+void dump_config_hmd() {
+    int hret = 0;
+    vl_driver* drv = vl_driver_init();
+    if (drv == nullptr)
+        return;
+
+    char * config = vl_get_config(drv->hmd_imu_device);
+    printf("hmd_imu_device config: %s\n", config);
+
+    vl_driver_close(drv);
+}
+
+
+
 void send_hmd_off() {
     int hret = 0;
     vl_driver* drv = vl_driver_init();
@@ -94,6 +109,8 @@ int main(int argc, char *argv[]) {
                 dump_hmd_imu();
             } else if(compare(argv[2], "hmd-light")) {
                 dump_hmd_light();
+            } else if(compare(argv[2], "hmd-config")) {
+                dump_config_hmd();
             } else {
                 printf("Unknown argument %s\n", argv[2]);
                 print_usage();
