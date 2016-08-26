@@ -177,16 +177,25 @@ inline static bool vl_msg_decode_controller_light(vive_headset_lighthouse_pulse_
 inline static void vl_msg_print_controller_light(vive_headset_lighthouse_pulse_report1* pkt) {
     printf("== hmd light sample ==\n");
     printf("  report_id: %u\n", pkt->report_id);
+    printf("        num | id | type | length | time\n");
     for(int i = 0; i < 7; i++){
 
         if (pkt->samples[i].type == 0xff)
             // This is not a continue because there is never any sample after that.
             break;
 
-        printf("     sensor_id[%d]: %hd\n", i, pkt->samples[i].sensor_id);
-        printf("      length[%d]: %d\n", i, pkt->samples[i].length);
-        printf("      time[%d]: %zd\n", i, pkt->samples[i].time);
-        printf("\n");
+        // TODO: identify what these two types mean, and why they are different.
+        if (pkt->samples[i].type != 0x00 && pkt->samples[i].type != 0xfe) {
+            fprintf(stderr, "Unknown sensor type %d\n", pkt->samples[i].type);
+            continue;
+        }
+
+        printf("          %d | %02hhu |  %02hhu  | % 6d | %u\n",
+               i,
+               pkt->samples[i].sensor_id,
+               pkt->samples[i].type,
+               pkt->samples[i].length,
+               pkt->samples[i].time);
     }
     printf("padding: %u\n", pkt->padding);
 }
