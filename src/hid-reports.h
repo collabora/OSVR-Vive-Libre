@@ -98,7 +98,7 @@ struct vive_headset_lighthouse_pulse1 {
 struct vive_headset_lighthouse_pulse_report1 {
 	__u8 report_id;
 	struct vive_headset_lighthouse_pulse1 samples[7];
-	__u8 unknown;
+	__u8 padding;
 } __attribute__((packed));
 
 #define VIVE_CONTROLLER_REPORT1_ID			0x23

@@ -164,7 +164,12 @@ inline static bool vl_msg_decode_controller_light(vive_headset_lighthouse_pulse_
         pkt->samples[j].length = read16(&buffer);
         pkt->samples[j].time = uread32(&buffer);
     }
-    pkt->unknown = read8(&buffer);
+    pkt->padding = read8(&buffer);
+
+    if (pkt->padding != 0) {
+        fprintf(stderr, "Wrong padding data (expected 0 but got %d)\n", pkt->padding);
+        return false;
+    }
 
     return true;
 }
@@ -183,7 +188,7 @@ inline static void vl_msg_print_controller_light(vive_headset_lighthouse_pulse_r
         printf("      time[%d]: %zd\n", i, pkt->samples[i].time);
         printf("\n");
     }
-    printf("unknown: %u\n", pkt->unknown);
+    printf("padding: %u\n", pkt->padding);
 }
 
 inline static bool vl_msg_decode_watchman(vive_controller_report1* pkt, const unsigned char* buffer, int size)
