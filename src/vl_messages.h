@@ -131,7 +131,7 @@ inline static bool vl_msg_decode_hmd_light(vive_headset_lighthouse_pulse_report2
 }
 
 inline static void vl_msg_print_hmd_light(vive_headset_lighthouse_pulse_report2* pkt) {
-    printf("== hmd light sample ==\n");
+    printf("== controller light sample ==\n");
     printf("  report_id: %u\n", pkt->report_id);
     for(int i = 0; i < 9; i++){
         if (pkt->samples[i].time == UINT32_MAX)
@@ -170,7 +170,7 @@ inline static bool vl_msg_decode_controller_light(vive_headset_lighthouse_pulse_
 }
 
 inline static void vl_msg_print_controller_light(vive_headset_lighthouse_pulse_report1* pkt) {
-    printf("== controller light sample ==\n");
+    printf("== hmd light sample ==\n");
     printf("  report_id: %u\n", pkt->report_id);
     for(int i = 0; i < 7; i++){
 
