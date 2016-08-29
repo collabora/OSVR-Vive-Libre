@@ -9,123 +9,148 @@
 
 #include <string.h>
 #include "vl_fusion.h"
+#include "vl_math.h"
 
-void ofusion_init(vl_fusion* me)
+void vl_fusion_init(vl_fusion* me)
 {
     memset(me, 0, sizeof(vl_fusion));
-	me->orient.w = 1.0f;
 
-	ofq_init(&me->accel_fq, 20);
-	ofq_init(&me->ang_vel_fq, 20);
+    me->orientation = Eigen::Quaterniond(1,0,0,0);
+    //me->orientation = Eigen::Quaterniond(0.108076, -0.669340, 0.113456, 0.726245);
 
-	me->flags = FF_USE_GRAVITY;
-	me->grav_gain = 0.05f;
+    vl_filter_queue_init(&me->fq_acceleration, 20);
+    vl_filter_queue_init(&me->fq_angular_velocity, 20);
+
+    me->grav_gain = 0.05f;
 }
 
-void correct_gravity(vl_fusion* me, const vec3f* accel, float ang_vel_length) {
-    const float gravity_tolerance = .4f, ang_vel_tolerance = .1f;
-    const float min_tilt_error = 0.05f, max_tilt_error = 0.01f;
+#define GRAVITY_EARTH 9.82f
+
+double get_angle(const Eigen::Vector3d* me, const Eigen::Vector3d* vec)
+{
+    double lengths = me->norm() * vec->norm();
+    if (lengths == 0)
+        return 0;
+    return acos(me->dot(*vec) / lengths);
+}
+
+Eigen::Quaterniond* quat_init_axis(const Eigen::Vector3d* vec, double angle)
+{
+    return new Eigen::Quaterniond(
+                cos(angle / 2.0f),
+                vec->x() * sin(angle / 2.0f),
+                vec->y() * sin(angle / 2.0f),
+                vec->z() * sin(angle / 2.0f));
+}
+
+Eigen::Quaterniond* correct_gravity(vl_fusion* me, const Eigen::Vector3d* acceleration, float ang_vel_length) {
+    const double gravity_tolerance = .4f, ang_vel_tolerance = .1f;
+    const double min_tilt_error = 0.05f, max_tilt_error = 0.01f;
 
     // if the device is within tolerance levels, count this as the device is level and add to the counter
     // otherwise reset the counter and start over
+    if (ang_vel_length < ang_vel_tolerance && fabsf(acceleration->norm() - GRAVITY_EARTH) < gravity_tolerance)
+        me->device_level_count++;
 
-    me->device_level_count =
-        fabsf(ovec3f_get_length(accel) - 9.82f) < gravity_tolerance && ang_vel_length < ang_vel_tolerance
-        ? me->device_level_count + 1 : 0;
 
     // device has been level for long enough, grab mean from the accelerometer filter queue (last n values)
     // and use for correction
-
     if(me->device_level_count > 50){
         me->device_level_count = 0;
 
-        vec3f accel_mean;
-        ofq_get_mean(&me->accel_fq, &accel_mean);
+        Eigen::Vector3d acceleration_mean = vl_filter_queue_get_mean(&me->fq_acceleration);
+        acceleration_mean.normalize();
 
         // Calculate a cross product between what the device
         // thinks is up and what gravity indicates is down.
         // The values are optimized of what we would get out
         // from the cross product.
-        vec3f tilt = {{accel_mean.z, 0, -accel_mean.x}};
-
-        ovec3f_normalize_me(&tilt);
-        ovec3f_normalize_me(&accel_mean);
-
-        vec3f up = {{0, 1.0f, 0}};
-        float tilt_angle = ovec3f_get_angle(&up, &accel_mean);
+        Eigen::Vector3d up = Eigen::Vector3d::UnitY();
+        double tilt_angle = get_angle(&up, &acceleration_mean);
 
         if(tilt_angle > max_tilt_error){
+            Eigen::Vector3d tilt_e = Eigen::Vector3d(
+                        acceleration_mean.z(),
+                        0,
+                        -acceleration_mean.x());
+            tilt_e.normalize();
+
             me->grav_error_angle = tilt_angle;
-            me->grav_error_axis = tilt;
+            me->grav_error_axis = tilt_e;
         }
     }
 
     // preform gravity tilt correction
     if(me->grav_error_angle > min_tilt_error){
-        float use_angle;
-        // if less than 2000 iterations have passed, set the up axis to the correction value outright
+        double use_angle;
         if(me->grav_error_angle > gravity_tolerance && me->iterations < 2000){
+            // if less than 2000 iterations have passed, set the up axis to the correction value outright
             use_angle = -me->grav_error_angle;
             me->grav_error_angle = 0;
-        }
-
-        // otherwise try to correct
-        else {
+        } else {
+            // otherwise try to correct
             use_angle = -me->grav_gain * me->grav_error_angle * 0.005f * (5.0f * ang_vel_length + 1.0f);
             me->grav_error_angle += use_angle;
         }
 
         // perform the correction
-        quatf corr_quat, old_orient;
-        oquatf_init_axis(&corr_quat, &me->grav_error_axis, use_angle);
-        old_orient = me->orient;
-
-        oquatf_mult(&corr_quat, &old_orient, &me->orient);
+        return quat_init_axis(&me->grav_error_axis, use_angle);
     }
+
+    return NULL;
 }
 
-void ofusion_update(vl_fusion* me, float dt, vec3f vec3_gyro, vec3f vec3_accel)
+void vl_filter_queue_init(vl_queue* me, int size)
 {
-    /*
-    vec3f ang_vel = vec3_eigen_to_ohmd(vec3_gyro);
-    vec3f accel = vec3_eigen_to_ohmd(vec3_accel);
-*/
+    memset(me, 0, sizeof(vl_queue));
+    me->size = size;
+}
 
-    vec3f ang_vel = vec3_gyro;
-    vec3f accel = vec3_accel;
+void vl_filter_queue_add(vl_queue* me, const Eigen::Vector3d* vec)
+{
+    me->elems[me->at] = *vec;
+    int x = me->at + 1;
+    me->at = x % me->size;
+}
 
-    me->ang_vel = ang_vel;
-    me->accel = accel;
+Eigen::Vector3d vl_filter_queue_get_mean(const vl_queue* me)
+{
+    Eigen::Vector3d mean;
 
-	vec3f world_accel;
-    oquatf_get_rotated(&me->orient, &accel, &world_accel);
+    for(int i = 0; i < me->size; i++)
+        mean += me->elems[i];
 
-	me->iterations += 1;
-	me->time += dt;
-
-	ofq_add(&me->accel_fq, &world_accel);
-    ofq_add(&me->ang_vel_fq, &ang_vel);
-
-    float ang_vel_length = ovec3f_get_length(&ang_vel);
-
-	if(ang_vel_length > 0.0001f){
-		vec3f rot_axis =
-            {{ ang_vel.x / ang_vel_length, ang_vel.y / ang_vel_length, ang_vel.z / ang_vel_length }};
-
-		float rot_angle = ang_vel_length * dt;
-
-		quatf delta_orient;
-		oquatf_init_axis(&delta_orient, &rot_axis, rot_angle);
-
-		oquatf_mult_me(&me->orient, &delta_orient);
-	}
-
-	// gravity correction
-    if(me->flags & FF_USE_GRAVITY)
-        correct_gravity(me, &accel, ang_vel_length);
+    return mean / (double)me->size;
+}
 
 
-	// mitigate drift due to floating point
-	// inprecision with quat multiplication.
-	oquatf_normalize_me(&me->orient);
+void vl_fusion_update(vl_fusion* me, float dt, Eigen::Vector3d angular_velocity, Eigen::Vector3d acceleration)
+{
+    Eigen::Vector3d acceleration_world = me->orientation * acceleration;
+
+
+    me->iterations += 1;
+
+    vl_filter_queue_add(&me->fq_acceleration, &acceleration_world);
+    vl_filter_queue_add(&me->fq_angular_velocity, &angular_velocity);
+
+    float ang_vel_length = angular_velocity.norm();
+
+    if (ang_vel_length > 0.0001f) {
+        Eigen::Vector3d rot_axis = angular_velocity.normalized();
+        //Eigen::Vector3d rot_axis = -angular_velocity.normalized();
+        float rot_angle = ang_vel_length * dt;
+        me->orientation = me->orientation * Eigen::AngleAxisd(rot_angle, rot_axis);
+    }
+
+    // gravity correction
+    Eigen::Quaterniond* correction = correct_gravity(me, &acceleration, ang_vel_length);
+    if (correction != NULL) {
+        me->orientation = *correction * me->orientation;
+        delete(correction);
+    }
+
+    // mitigate drift due to floating point
+    // inprecision with quat multiplication.
+    me->orientation = me->orientation.normalized();
 }

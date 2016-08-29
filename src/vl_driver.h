@@ -40,5 +40,4 @@ void vl_driver_log_watchman(hid_device *dev);
 void vl_driver_log_hmd_light(hid_device *dev);
 void vl_driver_log_hmd_imu(hid_device* dev);
 
-
-Eigen::Quaternionf vl_imu_to_pose(vl_driver* drv);
+void vl_driver_update_pose(vl_driver* drv);

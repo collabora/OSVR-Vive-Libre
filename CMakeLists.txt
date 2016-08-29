@@ -7,6 +7,7 @@ project(com_osvr_Vive_Libre)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CopyImportedTarget)
 include(GNUInstallDirs)
+include(FindPkgConfig)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 11)
@@ -44,9 +45,7 @@ set(SOURCES
     src/vl_config.h
     src/vl_config.cpp
     src/vl_hmd.h
-    src/vl_math.h
-    src/omath.cpp
-    src/omath.h)
+    src/vl_math.h)
 
 add_library(vive-libre SHARED ${SOURCES})
 target_link_libraries(vive-libre hidapi-libusb z)
@@ -62,7 +61,7 @@ osvr_add_plugin(org_osvr_Vive_Libre ${OSVR_PLUGIN_SOURCES})
 target_include_directories(org_osvr_Vive_Libre
     PRIVATE
     ${EIGEN3_INCLUDE_DIR})
-target_link_libraries(org_osvr_Vive_Libre osvrPluginKit osvrCommon osvrUtil hidapi-libusb)
+target_link_libraries(org_osvr_Vive_Libre osvrPluginKit osvrCommon osvrUtil hidapi-libusb z)
 
 # Install files for the plugin.
 install(FILES

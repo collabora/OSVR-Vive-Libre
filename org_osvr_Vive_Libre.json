@@ -13,9 +13,11 @@
     }
   },
   "semantic": {
-    "hmd": "tracker/0"
+    "hmd": "tracker/0",
+    "ohmd": "tracker/1"
   },
   "automaticAliases": {
-    "/me/head": "semantic/hmd"
+    "/me/head": "semantic/hmd",
+    "/me/hands/left": "semantic/ohmd"
   }
  }

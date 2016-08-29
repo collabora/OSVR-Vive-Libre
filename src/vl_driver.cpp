@@ -43,6 +43,7 @@ vl_driver* vl_driver_init() {
     return hmd;
 }
 
+
 void vl_driver_close(vl_driver* drv) {
     hid_close(drv->hmd_device);
     hid_close(drv->hmd_imu_device);
@@ -161,7 +162,7 @@ vl_driver *vl_driver_open_device(int idx)
     //hret = hid_send_feature_report(drv->hmd_device, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
     //printf("enable lighthouse magic: %d\n", hret);
 
-    ofusion_init(&drv->sensor_fusion);
+    vl_fusion_init(&drv->sensor_fusion);
 
     return drv;
 
@@ -196,32 +197,17 @@ std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id)
 #define VL_POW_2_M12 8.0/32768.0 // pow(2, -12)
 #define VL_ACCEL_FACTOR VL_GRAVITY_EARTH * VL_POW_2_M13
 
-void vec3f_from_vive_vec_accel(const int16_t* smp, vec3f* out_vec)
+Eigen::Vector3d vec3_from_accel(const int16_t* smp)
 {
-    out_vec->x = (float)smp[0] * VL_ACCEL_FACTOR;
-    out_vec->y = (float)smp[1] * VL_ACCEL_FACTOR;
-    out_vec->z = (float)smp[2] * VL_ACCEL_FACTOR;
-}
-
-Eigen::Vector3f vec3_from_accel(const int16_t* smp)
-{
-    Eigen::Vector3f sample(smp[0], smp[1], smp[2]);
+    Eigen::Vector3d sample(smp[0], smp[1], smp[2]);
     return sample * VL_ACCEL_FACTOR;
 }
 
-Eigen::Vector3f vec3_from_gyro(const int16_t* smp)
+Eigen::Vector3d vec3_from_gyro(const int16_t* smp)
 {
-    Eigen::Vector3f sample(smp[0], smp[1], smp[2]);
+    Eigen::Vector3d sample(smp[0], smp[1], smp[2]);
     return sample * VL_POW_2_M12; // 8/32768 = 2^-12
 }
-
-void vec3f_from_vive_vec_gyro(const int16_t* smp, vec3f* out_vec)
-{
-    out_vec->x = (float)smp[0] * VL_POW_2_M12;
-    out_vec->y = (float)smp[1] * VL_POW_2_M12;
-    out_vec->z = (float)smp[2] * VL_POW_2_M12;
-}
-
 
 #define FEATURE_BUFFER_SIZE 256
 void vl_driver_log_watchman(hid_device *dev) {
@@ -300,13 +286,20 @@ int get_lowest_index(uint8_t s0, uint8_t s1, uint8_t s2) {
          :                              0;
 }
 
-Eigen::Quaternionf vl_imu_to_pose(vl_driver* drv)
+void vl_update_imu(vl_fusion* fusion, vl_imu_sample sample, float dt) {
+    Eigen::Vector3d vec3_gyro = vec3_from_gyro(sample.rot);
+    Eigen::Vector3d vec3_accel = vec3_from_accel(sample.acc);
+    vl_fusion_update(fusion, dt, vec3_gyro, vec3_accel);
+}
+
+void vl_driver_update_pose(vl_driver* drv)
 {
     int size = 0;
     unsigned char buffer[FEATURE_BUFFER_SIZE];
 
     while((size = hid_read(drv->hmd_imu_device, buffer, FEATURE_BUFFER_SIZE)) > 0){
         if(buffer[0] == VL_MSG_HMD_IMU){
+
             vl_msg_hmd_imu pkt;
             vl_msg_decode_hmd_imu(&pkt, buffer, size);
 
@@ -326,19 +319,8 @@ Eigen::Quaternionf vl_imu_to_pose(vl_driver* drv)
                 }
 
                 if (is_timestamp_valid(sample.time_ticks, drv->previous_ticks)) {
-
-                    vec3f raw_accel, raw_gyro;
-                    /*
-                    Eigen::Vector3f vec3_gyro = vec3_from_gyro(sample.rot);
-                    Eigen::Vector3f vec3_accel = vec3_from_accel(sample.acc);
-                    */
-                    vec3f_from_vive_vec_accel(sample.acc, &raw_accel);
-                    vec3f_from_vive_vec_gyro(sample.rot, &raw_gyro);
-
                     float dt = FREQ_48MHZ * (sample.time_ticks - drv->previous_ticks);
-
-                    ofusion_update(&drv->sensor_fusion, dt, raw_gyro, raw_accel);
-
+                    vl_update_imu(&drv->sensor_fusion, sample, dt);
                     drv->previous_ticks = pkt.samples[index].time_ticks;
                 }
             }
@@ -347,10 +329,7 @@ Eigen::Quaternionf vl_imu_to_pose(vl_driver* drv)
         }
     }
 
-
     if(size < 0){
         printf("error reading from device\n");
     }
-
-    return openhmd_to_eigen_quaternion(drv->sensor_fusion.orient);
 }

@@ -31,6 +31,14 @@
 #include "vl_driver.h"
 #include "vl_math.h"
 
+
+#include <osvr/Util/EigenCoreGeometry.h>
+#include <osvr/Util/EigenInterop.h>
+#include <osvr/Util/TimeValue.h>
+
+
+namespace ei = osvr::util::eigen_interop;
+
 static const auto PREFIX = "[vive-libre] ";
 
 
@@ -73,14 +81,19 @@ class TrackerDevice {
         OSVR_TimeValue now;
         osvrTimeValueGetNow(&now);
 
-        OSVR_PoseState pose;
+        OSVR_Pose3 pose;
         osvrPose3SetIdentity(&pose);
 
-        // transform pose
-        Eigen::AngleAxis<float> rotation_fix(0.5*M_PI, Eigen::Vector3f::UnitY());
-        Eigen::Quaternion<float> q = rotation_fix * vl_imu_to_pose(vive);
-        pose.rotation = eigen_to_osvr_quaternion(q);
+        vl_driver_update_pose(vive);
 
+        //Fix transformation
+        Eigen::AngleAxisd rotation_fix(0.5*M_PI, Eigen::Vector3d::UnitY());
+        Eigen::Quaterniond pose_eigen = vive->sensor_fusion.orientation;
+        Eigen::Quaterniond q = rotation_fix * switch_coord_order(&pose_eigen);
+        Eigen::Quaterniond inv = eigen_quaternion_inverse_handedness(q);
+
+        // Push pose to OSVR
+        osvr::util::toQuat (inv, pose.rotation);
         osvrDeviceTrackerSendPose(m_dev, m_tracker, &pose, 0);
 
         return OSVR_RETURN_SUCCESS;

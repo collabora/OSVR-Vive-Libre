@@ -14,8 +14,8 @@
 
         "window": {
             "title": "OSVR",
-            "fullScreenEnabled": false,
-            "xPosition": 1920,
+            "fullScreenEnabled": true,
+            "xPosition": 4480,
             "yPosition": 0
         },
 
