@@ -1,0 +1,85 @@
+{
+    "comment": "You can use ViveDisplayExtractor from OSVR-Vive to extract a config from your device.",
+    "display": {
+       "hmd" : {
+          "device" : {
+             "Version" : "",
+             "model" : "Vive",
+             "vendor" : "HTC"
+          },
+          "distortion" : {
+             "rgb_point_samples_external_file" : "/usr/share/osvrcore/sample-configs/HTC_Vive_meshdata.json"
+          },
+          "eyes" : [
+             {
+                "center_proj_x" : 0.54053610563278198,
+                "center_proj_y" : 0.49780362844467163
+             },
+             {
+                "center_proj_x" : 0.44958537817001343,
+                "center_proj_y" : 0.4974265992641449
+             }
+          ],
+          "field_of_view" : {
+             "monocular_horizontal" : 105.70224761962891,
+             "monocular_vertical" : 111.49478149414062,
+             "overlap_percent" : 97.032329683884882,
+             "pitch_tilt" : 0.079456329345703125
+          },
+          "rendering" : {},
+          "resolutions" : [
+             {
+                "display_mode" : "horz_side_by_side",
+                "height" : 1200,
+                "swap_eyes" : 0,
+                "video_inputs" : 1,
+                "width" : 2160
+             }
+          ]
+       },
+       "meta" : {
+          "schemaVersion" : 1
+       }
+    },
+    "renderManagerConfig": {
+        "meta": {
+            "schemaVersion": 1
+        },
+        "renderManagerConfig": {
+            "directModeEnabled": false,
+            "directDisplayIndex": 1,
+            "directHighPriorityEnabled": true,
+            "numBuffers": 2,
+            "verticalSyncEnabled": true,
+            "verticalSyncBlockRenderingEnabled": true,
+            "renderOverfillFactor": 1.5,
+            "renderOversampleFactor": 1.0,
+
+            "window": {
+                "title": "OSVR",
+                "fullScreenEnabled": true,
+                "xPosition": 4480,
+                "yPosition": 0
+            },
+
+            "display": {
+                "rotation": 0,
+                "bitsPerColor": 8
+            },
+
+		    "prediction": {
+				    "enabled": true,
+				    "staticDelayMS": 48,
+				    "leftEyeDelayMS": 7.5,
+				    "rightEyeDelayMS": 0,
+				    "localTimeOverride": true
+		    },
+            "timeWarp": {
+                "enabled": true,
+                "asynchronous": false,
+                "maxMsBeforeVSync": 0
+            }
+        }
+    }
+}
+

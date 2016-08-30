@@ -106,7 +106,7 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
 
             if (ret == NULL) {
                 char* path = _hid_to_unix_path(cur_dev->path);
-                printf("Opening failed. Do you have the correct udev rules in place?\nTry: sudo chmod 666 %s\n", path, path);
+                printf("Opening failed. Is another driver running? Do you have the correct udev rules in place?\nTry: sudo chmod 666 %s\n", path, path);
                 free(path);
                 hid_free_enumeration(devs);
                 return NULL;

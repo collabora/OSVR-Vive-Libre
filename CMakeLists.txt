@@ -18,20 +18,15 @@ find_package(JsonCpp REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system iostreams filesystem)
 find_package(Eigen3 REQUIRED)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
+PKG_CHECK_MODULES (HIDAPI REQUIRED hidapi-libusb)
+PKG_CHECK_MODULES (ZLIB REQUIRED zlib)
 
-include_directories(/usr/include/hidapi/ ${EIGEN3_INCLUDE_DIR} src)
-
+include_directories(${EIGEN3_INCLUDE_DIR} ${HIDAPI_INCLUDE_DIRS} src)
 
 # Build the plugin
-
 osvr_convert_json(org_osvr_Vive_Libre_json
-    org_osvr_Vive_Libre.json
+    config/org_osvr_Vive_Libre.json
     "${CMAKE_CURRENT_BINARY_DIR}/org_osvr_Vive_Libre_json.h")
-
-osvr_convert_json(com_osvr_Vive_json
-    com_osvr_Vive.json
-    "${CMAKE_CURRENT_BINARY_DIR}/com_osvr_Vive_json.h")
 
 set(SOURCES
     src/hidraw.h
@@ -48,26 +43,35 @@ set(SOURCES
     src/vl_math.h)
 
 add_library(vive-libre SHARED ${SOURCES})
-target_link_libraries(vive-libre hidapi-libusb z)
+target_link_libraries(vive-libre
+    ${HIDAPI_LIBRARIES}
+    ${ZLIB_LIBRARIES})
 
 set(OSVR_PLUGIN_SOURCES
     src/org_osvr_Vive_Libre.cpp
     ${SOURCES}
-    "${CMAKE_CURRENT_BINARY_DIR}/com_osvr_Vive_json.h"
     "${CMAKE_CURRENT_BINARY_DIR}/org_osvr_Vive_Libre_json.h")
 
 osvr_add_plugin(org_osvr_Vive_Libre ${OSVR_PLUGIN_SOURCES})
 
-target_include_directories(org_osvr_Vive_Libre
-    PRIVATE
-    ${EIGEN3_INCLUDE_DIR})
-target_link_libraries(org_osvr_Vive_Libre osvrPluginKit osvrCommon osvrUtil hidapi-libusb z)
+target_link_libraries(org_osvr_Vive_Libre
+    osvrPluginKit
+    osvrCommon
+    osvrUtil
+    ${HIDAPI_LIBRARIES}
+    ${ZLIB_LIBRARIES})
 
 # Install files for the plugin.
-install(FILES
-    osvr_server_config.vive_libre.sample.json
-    DESTINATION .)
+install(
+    FILES
+    config/osvr_server_config.vive_libre.sample.json config/HTC_Vive_meshdata.json
+    DESTINATION
+    ${CMAKE_INSTALL_DATAROOTDIR}/osvrcore/sample-configs)
+
+install(TARGETS vive-libre DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 # Build tool
 add_executable(vivectl tools/vivectl.cpp)
 target_link_libraries(vivectl vive-libre)
+
+install(TARGETS vivectl DESTINATION ${CMAKE_INSTALL_BINDIR})

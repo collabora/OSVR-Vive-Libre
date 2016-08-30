@@ -116,10 +116,8 @@ void vl_filter_queue_add(vl_queue* me, const Eigen::Vector3d* vec)
 Eigen::Vector3d vl_filter_queue_get_mean(const vl_queue* me)
 {
     Eigen::Vector3d mean;
-
     for(int i = 0; i < me->size; i++)
         mean += me->elems[i];
-
     return mean / (double)me->size;
 }
 
@@ -127,7 +125,6 @@ Eigen::Vector3d vl_filter_queue_get_mean(const vl_queue* me)
 void vl_fusion_update(vl_fusion* me, float dt, Eigen::Vector3d angular_velocity, Eigen::Vector3d acceleration)
 {
     Eigen::Vector3d acceleration_world = me->orientation * acceleration;
-
 
     me->iterations += 1;
 
@@ -152,5 +149,5 @@ void vl_fusion_update(vl_fusion* me, float dt, Eigen::Vector3d angular_velocity,
 
     // mitigate drift due to floating point
     // inprecision with quat multiplication.
-    me->orientation = me->orientation.normalized();
+    me->orientation.normalize();
 }

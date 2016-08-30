@@ -1,0 +1,21 @@
+{
+  "deviceVendor": "Vive Libre",
+  "deviceName": "HTC Vive",
+  "author": "Lubosz Sarnecki lubosz.sarnecki@collabora.co.uk",
+  "version": 1,
+  "lastModified": "",
+  "interfaces": {
+    "tracker": {
+      "count": 1,
+      "bounded": true,
+      "position": false,
+      "orientation": true
+    }
+  },
+  "semantic": {
+    "hmd": "tracker/0"
+  },
+  "automaticAliases": {
+    "/me/head": "semantic/hmd"
+  }
+ }
