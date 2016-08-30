@@ -34,12 +34,22 @@
 static const auto PREFIX = "[vive-libre] ";
 
 
+void vl_print(std::string s) {
+    std::cout << PREFIX << s << std::endl;
+};
+
 class TrackerDevice {
+
+  private:
+    osvr::pluginkit::DeviceToken m_dev;
+    OSVR_TrackerDeviceInterface m_tracker;
+    vl_driver* vive;
+
   public:
-    TrackerDevice(OSVR_PluginRegContext ctx) {
+    TrackerDevice(OSVR_PluginRegContext ctx, vl_driver* vive) {
         // init osvr device
 
-        std::cout << PREFIX << "Init Tracker Device." << std::endl;
+        vl_print("Init Tracker Device.");
         
         OSVR_DeviceInitOptions opts = osvrDeviceCreateInitOptions(ctx);
 
@@ -55,8 +65,7 @@ class TrackerDevice {
         // Register update callback
         m_dev.registerUpdateCallback(this);
 
-        // init vive-libre
-        vive = vl_driver_init();
+        this->vive= vive;
     }
 
 
@@ -77,32 +86,34 @@ class TrackerDevice {
         return OSVR_RETURN_SUCCESS;
     }
 
-  private:
-    osvr::pluginkit::DeviceToken m_dev;
-    OSVR_TrackerDeviceInterface m_tracker;
-    vl_driver* vive;
 };
 
 class HardwareDetection {
+    vl_driver* vive;
   public:
     HardwareDetection() : m_found(false) {
-    
-    std::cout << PREFIX << "Detecting Vive Hardware." << std::endl;
-    
+        vl_print("Detecting Vive Hardware.");
+        // init vive-libre
+        this->vive = vl_driver_init();
+        if (vive != NULL)
+            m_found = true;
     }
+    ~HardwareDetection() {
+        vl_print("Shutting Down.");
+        vl_driver_close(this->vive);
+    }
+
     OSVR_ReturnCode operator()(OSVR_PluginRegContext ctx) {
 
         if (m_found) {
+            /// Create our device object
+            osvr::pluginkit::registerObjectForDeletion(ctx, new TrackerDevice(ctx, this->vive));
             return OSVR_RETURN_SUCCESS;
         }
 
-        /// we always detect device in sample plugin
-        m_found = true;
+        vl_print("No Vive detected.");
 
-        /// Create our device object
-        osvr::pluginkit::registerObjectForDeletion(ctx, new TrackerDevice(ctx));
-
-        return OSVR_RETURN_SUCCESS;
+        return OSVR_RETURN_FAILURE;
     }
 
   private:
@@ -112,9 +123,7 @@ class HardwareDetection {
 OSVR_PLUGIN(org_osvr_Vive_Libre) {
 
     osvr::pluginkit::PluginContext context(ctx);
-    
-    std::cout << PREFIX << "Init Plug-In." << std::endl;
-
+    vl_print("Welcome Human.");
     /// Register a detection callback function object.
     context.registerHardwareDetectCallback(new HardwareDetection());
 
