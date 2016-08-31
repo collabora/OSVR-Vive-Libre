@@ -33,6 +33,8 @@ void vl_error(const char* msg) {
     printf("error: %s\n", msg);
 }
 
+static std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id);
+
 vl_driver* vl_driver_init() {
     // Probe for devices
     std::vector<int> paths = vl_driver_get_device_paths(HTC_ID, VIVE_HMD);
@@ -200,7 +202,7 @@ cleanup:
     return NULL;
 }
 
-std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id)
+static std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id)
 {
     struct hid_device_info* devs = hid_enumerate(vendor_id, device_id);
     struct hid_device_info* cur_dev = devs;
@@ -224,13 +226,13 @@ std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id)
 #define VL_POW_2_M12 8.0/32768.0 // pow(2, -12)
 #define VL_ACCEL_FACTOR VL_GRAVITY_EARTH * VL_POW_2_M13
 
-Eigen::Vector3d vec3_from_accel(const __le16* smp)
+static Eigen::Vector3d vec3_from_accel(const __le16* smp)
 {
     Eigen::Vector3d sample(smp[0], smp[1], smp[2]);
     return sample * VL_ACCEL_FACTOR;
 }
 
-Eigen::Vector3d vec3_from_gyro(const __le16* smp)
+static Eigen::Vector3d vec3_from_gyro(const __le16* smp)
 {
     Eigen::Vector3d sample(smp[0], smp[1], smp[2]);
     return sample * VL_POW_2_M12; // 8/32768 = 2^-12
@@ -300,14 +302,14 @@ void vl_driver_log_hmd_imu(hid_device* dev) {
     }
 }
 
-bool is_timestamp_valid(uint32_t t1, uint32_t t2) {
+static bool is_timestamp_valid(uint32_t t1, uint32_t t2) {
     return t1 != t2 && (
         (t1 < t2 && t2 - t1 > UINT32_MAX >> 2) ||
         (t1 > t2 && t1 - t2 < UINT32_MAX >> 2)
     );
 }
 
-int get_lowest_index(uint8_t s0, uint8_t s1, uint8_t s2) {
+static int get_lowest_index(uint8_t s0, uint8_t s1, uint8_t s2) {
     return (s0 == (uint8_t)(s1 + 2) ) ? 1
          : (s1 == (uint8_t)(s2 + 2) ) ? 2
          :                              0;

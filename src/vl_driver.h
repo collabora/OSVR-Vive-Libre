@@ -55,7 +55,6 @@ typedef struct {
 
 vl_driver* vl_driver_init();
 void vl_driver_close(vl_driver* drv);
-std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id);
 vl_driver* vl_driver_open_device(int idx);
 
 void vl_driver_log_watchman(hid_device *dev);
