@@ -36,10 +36,8 @@ set(SOURCES
     src/vl_fusion.h
     src/vl_magic.h
     src/vl_messages.h
-    src/vl_controller.h
     src/vl_config.h
     src/vl_config.cpp
-    src/vl_hmd.h
     src/vl_math.h)
 
 add_library(vive-libre SHARED ${SOURCES})
