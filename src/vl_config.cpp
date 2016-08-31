@@ -1,6 +1,7 @@
 /*
- * HTC Vive configuration data readout
+ * HTC Vive USB HID reports
  * Copyright 2016 Philipp Zabel
+ * Copyright 2016 Lubosz Sarnecki <lubosz.sarnecki@collabora.co.uk>
  * SPDX-License-Identifier:	LGPL-2.0+
  */
 

@@ -1,4 +1,11 @@
+/*
+ * HTC Vive USB HID reports
+ * Copyright 2016 Philipp Zabel
+ * SPDX-License-Identifier:	LGPL-2.0+
+ */
+
 #pragma once
+
 #include <linux/hidraw.h>
 #include <sys/ioctl.h>
 #include <time.h>
