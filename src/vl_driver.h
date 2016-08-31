@@ -26,11 +26,7 @@
 
 #pragma once
 
-#include <stdbool.h>
 #include <hidapi.h>
-
-#include <vector>
-#include <Eigen/Geometry>
 
 #include "vl_magic.h"
 #include "vl_fusion.h"
