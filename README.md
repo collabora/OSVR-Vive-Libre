@@ -1,5 +1,6 @@
 # OSVR-Vive-Libre
-Upstream repo <https://github.com/lubosz/OSVR-Vive-Libre>
+
+Upstream <https://github.com/lubosz/OSVR-Vive-Libre>
 
 A Free Software driver for OSVR that provides support for the HTC Vive headset
 without the need of proprietary software dependencies. 
@@ -8,22 +9,26 @@ and was developed at [Collabora](https://www.collabora.com/) R&D.
 
 ## Features
 
-Currently Vive Libre provides IMU tracking support via the OSVR API. 
+Currently Vive Libre provides basic IMU tracking support via the OSVR API.
 Lighthouse external tracking is WIP. 
 Our efforts at analysing the Lighthouse signal can be found at
 [vive-libre-analysis-and-data](https://git.collabora.com/cgit/user/lubosz/vive-libre-analysis-and-data.git/)
 
 ## Distribution
+
 OSVR Vive Libre is available on the Arch User Repository. (AUR: [osvr-vive-libre-git](https://aur.archlinux.org/packages/osvr-vive-libre-git)).
 
 ## Build
+
 We use CMake
 
     $ cmake .
     $ make
 
 ## Usage
+
 ### vivectl
+
 A tool to dump Vive raw sensor and config data, and send commands to the device.
 	
 	$ vivectl -h
@@ -45,6 +50,7 @@ You can also check out the OSVR-RenderManager demos. (AUR: osvr-rendermanager-gi
 	$ RenderManagerOpenGLExample
 
 ## License
+
 Vive Libre is licensed under the LGPLv3+.
 
 
