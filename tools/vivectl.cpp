@@ -1,10 +1,12 @@
 #include <stdio.h>
+#include <signal.h>
 #include <string>
 #include "vl_driver.h"
 #include "vl_config.h"
 
+vl_driver* driver;
 
-void print_usage() {
+static void print_usage() {
     printf("Examples:\n");
     printf("vivectl dump hmd-imu\n");
     printf("vivectl dump hmd-light\n");
@@ -14,103 +16,88 @@ void print_usage() {
     printf("vivectl send controller-off\n");
 }
 
-bool compare(std::string str1, std::string str2) {
+static bool compare(const std::string& str1, const std::string& str2) {
     return str1.compare(str2) == 0;
 }
 
-void dump_controller() {
-    vl_driver* drv = vl_driver_init();
-    if (drv == nullptr)
-        return;
+static void dump_controller() {
     while(true)
-        vl_driver_log_watchman(drv->watchman_dongle_device);
-    vl_driver_close(drv);
+        vl_driver_log_watchman(driver->watchman_dongle_device);
 }
 
-void dump_hmd_imu() {
-    vl_driver* drv = vl_driver_init();
-    if (drv == nullptr)
-        return;
+static void dump_hmd_imu() {
     while(true)
-        vl_driver_log_hmd_imu(drv->hmd_imu_device);
-    vl_driver_close(drv);
+        vl_driver_log_hmd_imu(driver->hmd_imu_device);
 }
 
-void dump_hmd_light() {
-    vl_driver* drv = vl_driver_init();
-    if (drv == nullptr)
-        return;
+static void dump_hmd_light() {
     while(true)
-        vl_driver_log_hmd_light(drv->hmd_light_sensor_device);
-    vl_driver_close(drv);
+        vl_driver_log_hmd_light(driver->hmd_light_sensor_device);
 }
 
-void send_hmd_on() {
-    int hret = 0;
-    vl_driver* drv = vl_driver_init();
-    if (drv == nullptr)
-        return;
-    printf("hmd on.\n");
-
+static void send_hmd_on() {
     // turn the display on
-    hret = hid_send_feature_report(drv->hmd_device, vive_magic_power_on, sizeof(vive_magic_power_on));
+    int hret = hid_send_feature_report(driver->hmd_device,
+                                   vive_magic_power_on,
+                                   sizeof(vive_magic_power_on));
     printf("power on magic: %d\n", hret);
-    vl_driver_close(drv);
 }
 
-void dump_config_hmd() {
-    int hret = 0;
-    vl_driver* drv = vl_driver_init();
-    if (drv == nullptr)
-        return;
-
-    char * config = vl_get_config(drv->hmd_imu_device);
+static void dump_config_hmd() {
+    char * config = vl_get_config(driver->hmd_imu_device);
     printf("hmd_imu_device config: %s\n", config);
-
-    vl_driver_close(drv);
 }
 
-
-
-void send_hmd_off() {
-    int hret = 0;
-    vl_driver* drv = vl_driver_init();
-    if (drv == nullptr)
-        return;
-    printf("hmd off.\n");
-
+static void send_hmd_off() {
     // turn the display off
-    hret = hid_send_feature_report(drv->hmd_device, vive_magic_power_off1, sizeof(vive_magic_power_off1));
+    int hret = hid_send_feature_report(driver->hmd_device,
+                                   vive_magic_power_off1,
+                                   sizeof(vive_magic_power_off1));
     printf("power off magic 1: %d\n", hret);
 
-    hret = hid_send_feature_report(drv->hmd_device, vive_magic_power_off2, sizeof(vive_magic_power_off2));
+    hret = hid_send_feature_report(driver->hmd_device,
+                                   vive_magic_power_off2,
+                                   sizeof(vive_magic_power_off2));
     printf("power off magic 2: %d\n", hret);
-
-    vl_driver_close(drv);
 }
 
-void send_controller_off() {
-    int hret = 0;
-    printf("controller off.\n");
-    vl_driver* drv = vl_driver_init();
-    if (drv == nullptr)
+static void send_controller_off() {
+    int hret = hid_send_feature_report(driver->watchman_dongle_device,
+                                       vive_controller_power_off,
+                                       sizeof(vive_controller_power_off));
+}
+
+
+static void signal_interrupt_handler(int sig)
+{
+    signal(sig, SIG_IGN);
+    vl_driver_close(driver);
+    exit(0);
+}
+
+void run(void (*task)(void)) {
+    driver = vl_driver_init();
+    if (driver == nullptr)
         return;
-    hret = hid_send_feature_report(drv->watchman_dongle_device, vive_controller_power_off, sizeof(vive_controller_power_off));
-    vl_driver_close(drv);
+    signal(SIGINT, signal_interrupt_handler);
+    task();
+    vl_driver_close(driver);
 }
 
 int main(int argc, char *argv[]) {
+    void (*task)(void);
+
     if ( argc < 3 ) {
         print_usage();
     } else {
         // dump
         if (compare(argv[1], "dump")) {
             if(compare(argv[2], "hmd-imu")) {
-                dump_hmd_imu();
+                task = &dump_hmd_imu;
             } else if(compare(argv[2], "hmd-light")) {
-                dump_hmd_light();
+                task = &dump_hmd_light;
             } else if(compare(argv[2], "hmd-config")) {
-                dump_config_hmd();
+                task = &dump_config_hmd;
             } else {
                 printf("Unknown argument %s\n", argv[2]);
                 print_usage();
@@ -119,11 +106,11 @@ int main(int argc, char *argv[]) {
             // send
         } else if (compare(argv[1], "send")) {
             if(compare(argv[2], "hmd-on")) {
-                send_hmd_on();
+                task = &send_hmd_on;
             } else if(compare(argv[2], "hmd-off")) {
-                send_hmd_off();
+                task = &send_hmd_off;
             } else if(compare(argv[2], "controller-off")) {
-                send_controller_off();
+                task = &send_controller_off;
             } else {
                 printf("Unknown argument %s\n", argv[2]);
                 print_usage();
@@ -135,5 +122,8 @@ int main(int argc, char *argv[]) {
             return 0;
         }
     }
+
+    run(task);
+
     return 0;
 }
