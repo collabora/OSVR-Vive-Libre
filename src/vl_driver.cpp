@@ -225,13 +225,13 @@ static std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id)
 #define VL_POW_2_M12 8.0/32768.0 // pow(2, -12)
 #define VL_ACCEL_FACTOR VL_GRAVITY_EARTH * VL_POW_2_M13
 
-static Eigen::Vector3d vec3_from_accel(const __le16* smp)
+static Eigen::Vector3d vec3_from_accel(const __s16* smp)
 {
     Eigen::Vector3d sample(smp[0], smp[1], smp[2]);
     return sample * VL_ACCEL_FACTOR;
 }
 
-static Eigen::Vector3d vec3_from_gyro(const __le16* smp)
+static Eigen::Vector3d vec3_from_gyro(const __s16* smp)
 {
     Eigen::Vector3d sample(smp[0], smp[1], smp[2]);
     return sample * VL_POW_2_M12; // 8/32768 = 2^-12

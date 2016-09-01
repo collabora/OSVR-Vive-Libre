@@ -75,8 +75,8 @@ struct vive_firmware_version_report {
 #define VIVE_HEADSET_IMU_REPORT_ID			0x20
 
 struct vive_headset_imu_sample {
-	__le16 acc[3];
-	__le16 rot[3];
+        __s16 acc[3];
+        __s16 rot[3];
 	__le32 time_ticks;
 	__u8 seq;
 } __attribute__((packed));
