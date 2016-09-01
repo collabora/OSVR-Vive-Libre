@@ -25,6 +25,7 @@
  */
 
 #include <vector>
+#include <map>
 
 #include "vl_driver.h"
 #include "vl_math.h"
@@ -239,66 +240,84 @@ static Eigen::Vector3d vec3_from_gyro(const __s16* smp)
 }
 
 #define FEATURE_BUFFER_SIZE 256
-void vl_driver_log_watchman(hid_device *dev) {
+typedef void (*read_fun_drv)(vl_driver* drv, unsigned char *buffer, int size);
+typedef void (*read_fun)(unsigned char *buffer, int size);
+
+void read_buffers(hid_device* dev, const std::map<vl_message, read_fun>& message_fun_map) {
     int size = 0;
-    unsigned char watchman_buffer[FEATURE_BUFFER_SIZE];
-    while((size = hid_read(dev, watchman_buffer, FEATURE_BUFFER_SIZE)) > 0){
-        if(watchman_buffer[0] == VL_MSG_WATCHMAN){
-            vive_controller_report1 pkt;
-            vl_msg_decode_watchman(&pkt, watchman_buffer, size);
-            vl_msg_print_watchman(&pkt);
-        }else if (watchman_buffer[0] == VL_MSG_36) {
-            // TODO: handle paket 36
-        }else{
-            printf("unhandled message type: %u\n", watchman_buffer[0]);
-        }
-    }
+    unsigned char buffer[FEATURE_BUFFER_SIZE];
+
+    while((size = hid_read(dev, buffer, FEATURE_BUFFER_SIZE)) > 0)
+        for (const auto& mf : message_fun_map)
+            if (buffer[0] == mf.first)
+                mf.second(buffer, size);
 
     if(size < 0){
         printf("error reading from device\n");
     }
+}
+
+void read_buffers_drv(vl_driver* drv, hid_device* dev, read_fun_drv fun, vl_message type) {
+    int size = 0;
+    unsigned char buffer[FEATURE_BUFFER_SIZE];
+
+    while((size = hid_read(dev, buffer, FEATURE_BUFFER_SIZE)) > 0){
+        if(buffer[0] == type){
+            fun(drv, buffer, size);
+        }else{
+            printf("unknown message type: %u\n", buffer[0]);
+        }
+    }
+    if(size < 0){
+        printf("error reading from device\n");
+    }
+}
+
+void _log_watchman(unsigned char *buffer, int size) {
+    vive_controller_report1 pkt;
+    vl_msg_decode_watchman(&pkt, buffer, size);
+    vl_msg_print_watchman(&pkt);
+}
+
+void _log_hmd_imu(unsigned char *buffer, int size) {
+    vive_headset_imu_report pkt;
+    vl_msg_decode_hmd_imu(&pkt, buffer, size);
+    vl_msg_print_hmd_imu(&pkt);
+}
+
+void _log_hmd_light(unsigned char *buffer, int size) {
+    vive_headset_lighthouse_pulse_report2 pkt;
+    vl_msg_decode_hmd_light(&pkt, buffer, size);
+    //vl_msg_print_hmd_light(&pkt);
+    vl_msg_print_hmd_light_csv(&pkt);
+}
+
+void _log_controller_light(unsigned char *buffer, int size) {
+    vive_headset_lighthouse_pulse_report1 pkt;
+    vl_msg_decode_controller_light(&pkt, buffer, size);
+    vl_msg_print_controller_light(&pkt);
+}
+
+void vl_driver_log_watchman(hid_device *dev) {
+    static std::map<vl_message, read_fun> message_parsers {
+        {VL_MSG_WATCHMAN, &_log_watchman},
+    };
+    read_buffers(dev, message_parsers);
+}
+
+void vl_driver_log_hmd_imu(hid_device* dev) {
+    static std::map<vl_message, read_fun> message_parsers {
+        {VL_MSG_HMD_IMU, &_log_hmd_imu},
+    };
+    read_buffers(dev, message_parsers);
 }
 
 void vl_driver_log_hmd_light(hid_device* dev) {
-    int size = 0;
-    unsigned char lighthouse_buffer[FEATURE_BUFFER_SIZE];
-    while((size = hid_read(dev, lighthouse_buffer, FEATURE_BUFFER_SIZE)) > 0){
-        if(lighthouse_buffer[0] == VL_MSG_HMD_LIGHT){
-            vive_headset_lighthouse_pulse_report2 pkt;
-            vl_msg_decode_hmd_light(&pkt, lighthouse_buffer, size);
-            //vl_msg_print_hmd_light(&pkt);
-            vl_msg_print_hmd_light_csv(&pkt);
-        } else if (lighthouse_buffer[0] == VL_MSG_CONTROLLER_LIGHT) {
-            vive_headset_lighthouse_pulse_report1 pkt;
-            vl_msg_decode_controller_light(&pkt, lighthouse_buffer, size);
-            vl_msg_print_controller_light(&pkt);
-        }else{
-            printf("unhandled message type: %u\n", lighthouse_buffer[0]);
-        }
-    }
-
-    if(size < 0){
-        printf("error reading from device\n");
-    }
-}
-
-
-void vl_driver_log_hmd_imu(hid_device* dev) {
-    int size = 0;
-    unsigned char buffer[FEATURE_BUFFER_SIZE];
-    while((size = hid_read(dev, buffer, FEATURE_BUFFER_SIZE)) > 0){
-        if(buffer[0] == VL_MSG_HMD_IMU){
-            vive_headset_imu_report pkt;
-            vl_msg_decode_hmd_imu(&pkt, buffer, size);
-            vl_msg_print_hmd_imu(&pkt);
-        }else{
-            printf("unhandled message type: %u\n", buffer[0]);
-        }
-    }
-
-    if(size < 0){
-        printf("error reading from device\n");
-    }
+    static std::map<vl_message, read_fun> message_parsers {
+        {VL_MSG_HMD_LIGHT, &_log_hmd_light},
+        {VL_MSG_CONTROLLER_LIGHT, &_log_controller_light}
+    };
+    read_buffers(dev, message_parsers);
 }
 
 static bool is_timestamp_valid(uint32_t t1, uint32_t t2) {
@@ -314,50 +333,36 @@ static int get_lowest_index(uint8_t s0, uint8_t s1, uint8_t s2) {
          :                              0;
 }
 
-void vl_update_imu(vl_fusion* fusion, vive_headset_imu_sample sample, float dt) {
-    Eigen::Vector3d vec3_gyro = vec3_from_gyro(sample.rot);
-    Eigen::Vector3d vec3_accel = vec3_from_accel(sample.acc);
-    vl_fusion_update(fusion, dt, vec3_gyro, vec3_accel);
-}
+void _update_pose(vl_driver* drv, unsigned char *buffer, int size) {
+    vive_headset_imu_report pkt;
+    vl_msg_decode_hmd_imu(&pkt, buffer, size);
 
-void vl_driver_update_pose(vl_driver* drv)
-{
-    int size = 0;
-    unsigned char buffer[FEATURE_BUFFER_SIZE];
+    int li = get_lowest_index(
+                pkt.samples[0].seq,
+                pkt.samples[1].seq,
+                pkt.samples[2].seq);
 
-    while((size = hid_read(drv->hmd_imu_device, buffer, FEATURE_BUFFER_SIZE)) > 0){
-        if(buffer[0] == VL_MSG_HMD_IMU){
+    for (int offset = 0; offset < 3; offset++) {
+        int index = (li + offset) % 3;
 
-            vive_headset_imu_report pkt;
-            vl_msg_decode_hmd_imu(&pkt, buffer, size);
+        vive_headset_imu_sample sample = pkt.samples[index];
 
-            int li = get_lowest_index(
-                        pkt.samples[0].seq,
-                        pkt.samples[1].seq,
-                        pkt.samples[2].seq);
+        if (drv->previous_ticks == 0) {
+            drv->previous_ticks = sample.time_ticks;
+            continue;
+        }
 
-            for (int offset = 0; offset < 3; offset++) {
-                int index = (li + offset) % 3;
-
-                vive_headset_imu_sample sample = pkt.samples[index];
-
-                if (drv->previous_ticks == 0) {
-                    drv->previous_ticks = sample.time_ticks;
-                    continue;
-                }
-
-                if (is_timestamp_valid(sample.time_ticks, drv->previous_ticks)) {
-                    float dt = FREQ_48MHZ * (sample.time_ticks - drv->previous_ticks);
-                    vl_update_imu(&drv->sensor_fusion, sample, dt);
-                    drv->previous_ticks = pkt.samples[index].time_ticks;
-                }
-            }
-        }else{
-            printf("unknown message type: %u\n", buffer[0]);
+        if (is_timestamp_valid(sample.time_ticks, drv->previous_ticks)) {
+            float dt = FREQ_48MHZ * (sample.time_ticks - drv->previous_ticks);
+            Eigen::Vector3d vec3_gyro = vec3_from_gyro(sample.rot);
+            Eigen::Vector3d vec3_accel = vec3_from_accel(sample.acc);
+            vl_fusion_update(&drv->sensor_fusion, dt, vec3_gyro, vec3_accel);
+            drv->previous_ticks = pkt.samples[index].time_ticks;
         }
     }
+}
 
-    if(size < 0){
-        printf("error reading from device\n");
-    }
+
+void vl_driver_update_pose(vl_driver* drv) {
+    read_buffers_drv(drv, drv->hmd_imu_device, &_update_pose, VL_MSG_HMD_IMU);
 }
