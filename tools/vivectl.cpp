@@ -1,20 +1,11 @@
 #include <stdio.h>
 #include <signal.h>
 #include <string>
+#include <map>
 #include "vl_driver.h"
 #include "vl_config.h"
 
 vl_driver* driver;
-
-static void print_usage() {
-    printf("Examples:\n");
-    printf("vivectl dump hmd-imu\n");
-    printf("vivectl dump hmd-light\n");
-    printf("vivectl dump controller-imu\n");
-    printf("vivectl dump controller-light\n");
-    printf("vivectl send hmd-off\n");
-    printf("vivectl send controller-off\n");
-}
 
 static bool compare(const std::string& str1, const std::string& str2) {
     return str1.compare(str2) == 0;
@@ -67,9 +58,7 @@ static void send_controller_off() {
                                        sizeof(vive_controller_power_off));
 }
 
-
-static void signal_interrupt_handler(int sig)
-{
+static void signal_interrupt_handler(int sig) {
     signal(sig, SIG_IGN);
     vl_driver_close(driver);
     exit(0);
@@ -84,46 +73,77 @@ void run(void (*task)(void)) {
     vl_driver_close(driver);
 }
 
+typedef void (*taskfkt)(void);
+
+static std::map<std::string, taskfkt> dump_commands {
+    { "hmd-imu", &dump_hmd_imu },
+    { "hmd-light", &dump_hmd_light },
+    { "hmd-config", &dump_config_hmd }
+};
+
+static std::map<std::string, taskfkt> send_commands {
+    { "hmd-on", &send_hmd_on },
+    { "hmd-off", &send_hmd_off },
+    { "controller-off", &send_controller_off }
+};
+
+static std::string commands_to_str(std::map<std::string, taskfkt> commands) {
+    std::string str;
+    for (const auto& cm : commands)
+        str += "  " + cm.first + "\n";
+    return str;
+}
+
+static void print_usage() {
+    std::string dmp_cmd_str = commands_to_str(dump_commands);
+    std::string snd_cmd_str = commands_to_str(send_commands);
+
+    const char *usage = "\
+Receive data from and send commands to Vive.\n\n\
+usage: vivectl <command> <message>\n\n\
+ dump\n\n\
+%s\n\
+ send\n\n\
+%s\n\
+Example: vivectl dump hmd-imu\n";
+    printf(usage, dmp_cmd_str.c_str(), snd_cmd_str.c_str());
+}
+
+static void argument_error(const char * arg) {
+    printf("Unknown argument %s\n", arg);
+    print_usage();
+}
+
+taskfkt check_command(char *argv[], const std::map<std::string, taskfkt>& commands) {
+    taskfkt task = NULL;
+    for (const auto& cm : commands)
+        if (compare(cm.first, argv[2]))
+            task = cm.second;
+
+    if (task == NULL)
+        argument_error(argv[2]);
+
+    return task;
+}
+
 int main(int argc, char *argv[]) {
-    void (*task)(void);
+    taskfkt task = NULL;
 
     if ( argc < 3 ) {
         print_usage();
     } else {
-        // dump
         if (compare(argv[1], "dump")) {
-            if(compare(argv[2], "hmd-imu")) {
-                task = &dump_hmd_imu;
-            } else if(compare(argv[2], "hmd-light")) {
-                task = &dump_hmd_light;
-            } else if(compare(argv[2], "hmd-config")) {
-                task = &dump_config_hmd;
-            } else {
-                printf("Unknown argument %s\n", argv[2]);
-                print_usage();
-                return 0;
-            }
-            // send
+            task = check_command(argv, dump_commands);
         } else if (compare(argv[1], "send")) {
-            if(compare(argv[2], "hmd-on")) {
-                task = &send_hmd_on;
-            } else if(compare(argv[2], "hmd-off")) {
-                task = &send_hmd_off;
-            } else if(compare(argv[2], "controller-off")) {
-                task = &send_controller_off;
-            } else {
-                printf("Unknown argument %s\n", argv[2]);
-                print_usage();
-                return 0;
-            }
+            task = check_command(argv, send_commands);
         } else {
-            printf("Unknown argument %s\n", argv[1]);
-            print_usage();
+            argument_error(argv[1]);
             return 0;
         }
     }
 
-    run(task);
+    if (task)
+        run(task);
 
     return 0;
 }
