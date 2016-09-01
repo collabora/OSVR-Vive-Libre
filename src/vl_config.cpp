@@ -64,8 +64,7 @@ char *vl_get_config(hid_device *dev)
 		count += buf[1];
 	} while (buf[1]);
 
-    printf("%s: Read configuration data: %d bytes\n", "devname",
-		count);
+    printf("%s: Read configuration data: %d bytes\n", "devname", count);
 
 	strm.zalloc = Z_NULL;
 	strm.zfree = Z_NULL;

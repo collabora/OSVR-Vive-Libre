@@ -187,7 +187,6 @@ vl_driver *vl_driver_open_device(int idx)
     if(!drv->watchman_dongle_device)
         goto cleanup;
 
-    // TODO: find command to enable hmd light sensors, as "seen" in OpenVR
     //hret = hid_send_feature_report(drv->hmd_device, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
     //printf("enable lighthouse magic: %d\n", hret);
 
@@ -248,7 +247,7 @@ void vl_driver_log_watchman(hid_device *dev) {
             vl_msg_decode_watchman(&pkt, watchman_buffer, size);
             vl_msg_print_watchman(&pkt);
         }else if (watchman_buffer[0] == VL_MSG_36) {
-            // todo handle paket 36
+            // TODO: handle paket 36
         }else{
             printf("unhandled message type: %u\n", watchman_buffer[0]);
         }
@@ -269,7 +268,6 @@ void vl_driver_log_hmd_light(hid_device* dev) {
             //vl_msg_print_hmd_light(&pkt);
             vl_msg_print_hmd_light_csv(&pkt);
         } else if (lighthouse_buffer[0] == VL_MSG_CONTROLLER_LIGHT) {
-            // TODO: Before SteamVR is run, the device returns a controller light message wrongfully
             vive_headset_lighthouse_pulse_report1 pkt;
             vl_msg_decode_controller_light(&pkt, lighthouse_buffer, size);
             vl_msg_print_controller_light(&pkt);
