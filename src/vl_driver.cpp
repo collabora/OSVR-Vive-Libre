@@ -166,6 +166,7 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
 vl_driver *vl_driver_open_device(int idx)
 {
     vl_driver* drv = new vl_driver;
+    drv->previous_ticks = 0;
 
     int hret = 0;
 
