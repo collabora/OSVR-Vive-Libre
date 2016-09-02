@@ -1,5 +1,7 @@
 # OSVR-Vive-Libre
 
+[![Join the chat at https://gitter.im/OSVR-Vive-Libre/Lobby](https://badges.gitter.im/OSVR-Vive-Libre/Lobby.svg)](https://gitter.im/OSVR-Vive-Libre/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Upstream <https://github.com/lubosz/OSVR-Vive-Libre>
 
 A Free Software driver for OSVR that provides support for the HTC Vive headset
