@@ -4,6 +4,9 @@
 cmake_minimum_required(VERSION 3.1.0)
 project(com_osvr_Vive_Libre)
 
+set (com_osvr_Vive_Libre_VERSION_MAJOR 0)
+set (com_osvr_Vive_Libre_VERSION_MINOR 1)
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CopyImportedTarget)
 include(GNUInstallDirs)
