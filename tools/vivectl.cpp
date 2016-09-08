@@ -62,19 +62,19 @@ static void send_controller_off() {
 
 static void signal_interrupt_handler(int sig) {
     signal(sig, SIG_IGN);
-    vl_driver_close(driver);
+    delete(driver);
     exit(0);
 }
 
 typedef std::function<void(void)> taskfun;
 
 void run(taskfun task) {
-    driver = vl_driver_init();
-    if (!vl_driver_init_devices(driver, 0))
+    driver = new vl_driver();
+    if (!driver->init_devices(0))
         return;
     signal(SIGINT, signal_interrupt_handler);
     task();
-    vl_driver_close(driver);
+    delete(driver);
 }
 
 static std::map<std::string, taskfun> dump_commands {

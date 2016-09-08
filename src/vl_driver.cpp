@@ -36,14 +36,19 @@ void vl_error(const char* msg) {
 
 static std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id);
 
-vl_driver* vl_driver_init() {
-    vl_driver* drv = new vl_driver();
-    drv->previous_ticks = 0;
-    drv->sensor_fusion = vl_fusion();
-    return drv;
+vl_driver::vl_driver() {
+    previous_ticks = 0;
+    sensor_fusion = vl_fusion();
 }
 
-bool vl_driver_init_devices(vl_driver *drv, unsigned index) {
+vl_driver::~vl_driver() {
+    hid_close(hmd_device);
+    hid_close(hmd_imu_device);
+    hid_close(watchman_dongle_device);
+    hid_close(hmd_light_sensor_device);
+}
+
+bool vl_driver::init_devices(unsigned index) {
     // Probe for devices
     std::vector<int> paths = vl_driver_get_device_paths(HTC_ID, VIVE_HMD);
     if(paths.size() <= 0) {
@@ -52,7 +57,7 @@ bool vl_driver_init_devices(vl_driver *drv, unsigned index) {
     }
 
     if(index < paths.size()){
-        return vl_driver_open_devices(drv, paths[index]);
+        return this->open_devices(paths[index]);
     } else {
         printf("no device with index: %d\n", index);
         return false;
@@ -60,14 +65,6 @@ bool vl_driver_init_devices(vl_driver *drv, unsigned index) {
 }
 
 
-
-void vl_driver_close(vl_driver* drv) {
-    hid_close(drv->hmd_device);
-    hid_close(drv->hmd_imu_device);
-    hid_close(drv->watchman_dongle_device);
-    hid_close(drv->hmd_light_sensor_device);
-    free(drv);
-}
 
 static void print_info_string(int (*fun)(hid_device*, wchar_t*, size_t), const char* what, hid_device* device)
 {
@@ -159,24 +156,24 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
     return ret;
 }
 
-bool vl_driver_open_devices(vl_driver* drv, int idx)
+bool vl_driver::open_devices(int idx)
 {
     // Open the HMD device
-    drv->hmd_device = open_device_idx(HTC_ID, VIVE_HMD, 0, 1, idx);
-    if(!drv->hmd_device)
+    this->hmd_device = open_device_idx(HTC_ID, VIVE_HMD, 0, 1, idx);
+    if(!this->hmd_device)
         goto cleanup;
 
     // Open the lighthouse device
-    drv->hmd_imu_device = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 0, 2, idx);
-    if(!drv->hmd_imu_device)
+    this->hmd_imu_device = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 0, 2, idx);
+    if(!this->hmd_imu_device)
         goto cleanup;
 
-    drv->hmd_light_sensor_device = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 1, 2, idx);
-    if(!drv->hmd_light_sensor_device)
+    this->hmd_light_sensor_device = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 1, 2, idx);
+    if(!this->hmd_light_sensor_device)
         goto cleanup;
 
-    drv->watchman_dongle_device = open_device_idx(VALVE_ID, VIVE_WATCHMAN_DONGLE, 1, 2, idx);
-    if(!drv->watchman_dongle_device)
+    this->watchman_dongle_device = open_device_idx(VALVE_ID, VIVE_WATCHMAN_DONGLE, 1, 2, idx);
+    if(!this->watchman_dongle_device)
         goto cleanup;
 
     //hret = hid_send_feature_report(drv->hmd_device, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
@@ -333,16 +330,16 @@ void _update_pose(vl_driver* drv, unsigned char *buffer, int size) {
 }
 
 
-void vl_driver_update_pose(vl_driver* drv) {
+void vl_driver::update_pose() {
 
-    read_fun update_pose_fun = [drv](unsigned char *buffer, int size) {
-        _update_pose(drv, buffer, size);
+    read_fun update_pose_fun = [this](unsigned char *buffer, int size) {
+        _update_pose(this, buffer, size);
     };
 
     static std::map<vl_message, read_fun> message_parsers {
         {VL_MSG_HMD_IMU, update_pose_fun},
     };
 
-    read_buffers(drv->hmd_imu_device, message_parsers);
+    read_buffers(this->hmd_imu_device, message_parsers);
 
 }

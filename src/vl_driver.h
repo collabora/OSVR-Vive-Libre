@@ -44,22 +44,24 @@
 
 #define FREQ_48MHZ 1.0f / 48000000.0f
 
-typedef struct {
+class vl_driver {
+    public:
     hid_device* hmd_device;
     hid_device* hmd_imu_device;
     hid_device* watchman_dongle_device;
     hid_device* hmd_light_sensor_device;
     uint32_t previous_ticks;
     vl_fusion sensor_fusion;
-} vl_driver;
 
-vl_driver* vl_driver_init();
-bool vl_driver_init_devices(vl_driver *drv, unsigned index);
-void vl_driver_close(vl_driver* drv);
-bool vl_driver_open_devices(vl_driver *drv, int idx);
+
+    vl_driver();
+    ~vl_driver();
+    bool init_devices(unsigned index);
+    bool open_devices(int idx);
+    void update_pose();
+};
+
 
 void vl_driver_log_watchman(hid_device *dev);
 void vl_driver_log_hmd_light(hid_device *dev);
 void vl_driver_log_hmd_imu(hid_device* dev);
-
-void vl_driver_update_pose(vl_driver* drv);

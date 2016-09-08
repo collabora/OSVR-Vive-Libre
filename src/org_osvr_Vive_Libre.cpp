@@ -89,7 +89,7 @@ class TrackerDevice {
         OSVR_Pose3 pose;
         osvrPose3SetIdentity(&pose);
 
-        vl_driver_update_pose(vive);
+        vive->update_pose();
 
         if (vive->previous_ticks != 0) {
             Eigen::Quaterniond pose_vl = vive->sensor_fusion.orientation;
@@ -116,12 +116,12 @@ class HardwareDetection {
     HardwareDetection() : m_found(false) {
         vl_print("Detecting Vive Hardware.");
         // init vive-libre
-        this->vive = vl_driver_init();
-        m_found = vl_driver_init_devices(this->vive, 0);
+        this->vive = new vl_driver();
+        m_found = this->vive->init_devices(0);
     }
     ~HardwareDetection() {
         vl_print("Shutting Down.");
-        vl_driver_close(this->vive);
+        delete(this->vive);
     }
 
     OSVR_ReturnCode operator()(OSVR_PluginRegContext ctx) {
