@@ -117,8 +117,7 @@ class HardwareDetection {
         vl_print("Detecting Vive Hardware.");
         // init vive-libre
         this->vive = vl_driver_init();
-        if (vive != NULL)
-            m_found = true;
+        m_found = vl_driver_init_devices(this->vive);
     }
     ~HardwareDetection() {
         vl_print("Shutting Down.");

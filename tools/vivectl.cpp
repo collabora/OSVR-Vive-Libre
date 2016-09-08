@@ -70,7 +70,7 @@ typedef std::function<void(void)> taskfun;
 
 void run(taskfun task) {
     driver = vl_driver_init();
-    if (driver == nullptr)
+    if (!vl_driver_init_devices(driver))
         return;
     signal(SIGINT, signal_interrupt_handler);
     task();

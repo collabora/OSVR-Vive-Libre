@@ -37,31 +37,31 @@ void vl_error(const char* msg) {
 static std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id);
 
 vl_driver* vl_driver_init() {
+    vl_driver* drv = new vl_driver();
+    drv->previous_ticks = 0;
+    drv->sensor_fusion = vl_fusion();
+    return drv;
+}
+
+bool vl_driver_init_devices(vl_driver *drv) {
     // Probe for devices
     std::vector<int> paths = vl_driver_get_device_paths(HTC_ID, VIVE_HMD);
     if(paths.size() <= 0) {
         fprintf(stderr, "No connected VIVE found.\n");
-        return NULL;
+        return false;
     }
 
     // Open default device (0)
     int index = 0;
 
-    vl_driver* hmd;
     if(index >= 0 && index < paths.size()){
-        hmd = vl_driver_open_device(paths[index]);
+        return vl_driver_open_devices(drv, paths[index]);
     } else {
         printf("no device with index: %d\n", index);
-        return NULL;
+        return false;
     }
-
-    if(!hmd){
-        fprintf(stderr, "failed to open device\n");
-        return NULL;
-    }
-
-    return hmd;
 }
+
 
 
 void vl_driver_close(vl_driver* drv) {
@@ -162,13 +162,8 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
     return ret;
 }
 
-
-
-vl_driver *vl_driver_open_device(int idx)
+bool vl_driver_open_devices(vl_driver* drv, int idx)
 {
-    vl_driver* drv = new vl_driver();
-    drv->previous_ticks = 0;
-
     int hret = 0;
 
     // Open the HMD device
@@ -192,15 +187,9 @@ vl_driver *vl_driver_open_device(int idx)
     //hret = hid_send_feature_report(drv->hmd_device, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
     //printf("enable lighthouse magic: %d\n", hret);
 
-    drv->sensor_fusion = vl_fusion();
-
-    return drv;
-
+    return true;
 cleanup:
-    if(drv)
-        free(drv);
-
-    return NULL;
+    return false;
 }
 
 static std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id)

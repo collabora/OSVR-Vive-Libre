@@ -54,8 +54,9 @@ typedef struct {
 } vl_driver;
 
 vl_driver* vl_driver_init();
+bool vl_driver_init_devices(vl_driver *drv);
 void vl_driver_close(vl_driver* drv);
-vl_driver* vl_driver_open_device(int idx);
+bool vl_driver_open_devices(vl_driver *drv, int idx);
 
 void vl_driver_log_watchman(hid_device *dev);
 void vl_driver_log_hmd_light(hid_device *dev);
