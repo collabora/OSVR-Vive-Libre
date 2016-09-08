@@ -166,7 +166,7 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
 
 vl_driver *vl_driver_open_device(int idx)
 {
-    vl_driver* drv = new vl_driver;
+    vl_driver* drv = new vl_driver();
     drv->previous_ticks = 0;
 
     int hret = 0;
@@ -192,7 +192,7 @@ vl_driver *vl_driver_open_device(int idx)
     //hret = hid_send_feature_report(drv->hmd_device, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
     //printf("enable lighthouse magic: %d\n", hret);
 
-    vl_fusion_init(&drv->sensor_fusion);
+    drv->sensor_fusion = vl_fusion();
 
     return drv;
 
@@ -342,7 +342,7 @@ void _update_pose(vl_driver* drv, unsigned char *buffer, int size) {
             float dt = FREQ_48MHZ * (sample.time_ticks - drv->previous_ticks);
             Eigen::Vector3d vec3_gyro = vec3_from_gyro(sample.rot);
             Eigen::Vector3d vec3_accel = vec3_from_accel(sample.acc);
-            vl_fusion_update(&drv->sensor_fusion, dt, vec3_gyro, vec3_accel);
+            drv->sensor_fusion.update(dt, vec3_gyro, vec3_accel);
             drv->previous_ticks = pkt.samples[index].time_ticks;
         }
     }

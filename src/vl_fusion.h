@@ -29,27 +29,30 @@
 #include <Eigen/Geometry>
 
 #define FILTER_QUEUE_MAX_SIZE 256
-typedef struct {
+class vl_filter_queue {
     int at, size;
     Eigen::Vector3d elems[FILTER_QUEUE_MAX_SIZE];
-} vl_queue;
 
-void vl_filter_queue_init(vl_queue* me, int size);
-void vl_filter_queue_add(vl_queue* me, const Eigen::Vector3d *vec);
-Eigen::Vector3d vl_filter_queue_get_mean(const vl_queue* me);
+public:
+    vl_filter_queue();
+    vl_filter_queue(int size);
+    ~vl_filter_queue();
+    void add(const Eigen::Vector3d *vec);
+    Eigen::Vector3d get_mean();
+};
 
-typedef struct {
+class vl_fusion {
+private:
 	int state;
 
-    Eigen::Quaterniond orientation;
     Eigen::Vector3d acceleration;
     Eigen::Vector3d angular_velocity;
 
 	int iterations;
 
 	// filter queues for magnetometer, accelerometers and angular velocity
-    vl_queue fq_acceleration;
-    vl_queue fq_angular_velocity;
+    vl_filter_queue fq_acceleration;
+    vl_filter_queue fq_angular_velocity;
 
 	// gravity correction
     int device_level_count;
@@ -57,7 +60,14 @@ typedef struct {
     Eigen::Vector3d grav_error_axis;
     double grav_gain; // amount of correction
 
-} vl_fusion;
+    Eigen::Quaterniond* correct_gravity(const Eigen::Vector3d* acceleration, float ang_vel_length);
 
-void vl_fusion_init(vl_fusion* me);
-void vl_fusion_update(vl_fusion* me, float dt, Eigen::Vector3d vec3_gyro, Eigen::Vector3d vec3_accel);
+public:
+    Eigen::Quaterniond orientation;
+
+    vl_fusion();
+    ~vl_fusion();
+    void update(float dt, Eigen::Vector3d vec3_gyro, Eigen::Vector3d vec3_accel);
+};
+
+
