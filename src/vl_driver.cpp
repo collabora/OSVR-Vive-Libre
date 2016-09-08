@@ -240,38 +240,24 @@ static Eigen::Vector3d vec3_from_gyro(const __s16* smp)
 }
 
 #define FEATURE_BUFFER_SIZE 256
-typedef void (*read_fun_drv)(vl_driver* drv, unsigned char *buffer, int size);
-typedef void (*read_fun)(unsigned char *buffer, int size);
+
+typedef std::function<void(unsigned char*,int)> read_fun;
 
 void read_buffers(hid_device* dev, const std::map<vl_message, read_fun>& message_fun_map) {
     int size = 0;
     unsigned char buffer[FEATURE_BUFFER_SIZE];
 
-    while((size = hid_read(dev, buffer, FEATURE_BUFFER_SIZE)) > 0)
-        for (const auto& mf : message_fun_map)
-            if (buffer[0] == mf.first)
-                mf.second(buffer, size);
+    while((size = hid_read(dev, buffer, FEATURE_BUFFER_SIZE)) > 0) {
+        auto it = message_fun_map.find((vl_message)buffer[0]);
+        if (it != message_fun_map.end())
+            it->second(buffer, size);
+    }
 
     if(size < 0){
         printf("error reading from device\n");
     }
 }
 
-void read_buffers_drv(vl_driver* drv, hid_device* dev, read_fun_drv fun, vl_message type) {
-    int size = 0;
-    unsigned char buffer[FEATURE_BUFFER_SIZE];
-
-    while((size = hid_read(dev, buffer, FEATURE_BUFFER_SIZE)) > 0){
-        if(buffer[0] == type){
-            fun(drv, buffer, size);
-        }else{
-            printf("unknown message type: %u\n", buffer[0]);
-        }
-    }
-    if(size < 0){
-        printf("error reading from device\n");
-    }
-}
 
 void _log_watchman(unsigned char *buffer, int size) {
     vive_controller_report1 pkt;
@@ -364,5 +350,15 @@ void _update_pose(vl_driver* drv, unsigned char *buffer, int size) {
 
 
 void vl_driver_update_pose(vl_driver* drv) {
-    read_buffers_drv(drv, drv->hmd_imu_device, &_update_pose, VL_MSG_HMD_IMU);
+
+    read_fun update_pose_fun = [drv](unsigned char *buffer, int size) {
+        _update_pose(drv, buffer, size);
+    };
+
+    static std::map<vl_message, read_fun> message_parsers {
+        {VL_MSG_HMD_IMU, update_pose_fun},
+    };
+
+    read_buffers(drv->hmd_imu_device, message_parsers);
+
 }

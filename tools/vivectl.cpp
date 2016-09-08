@@ -21,17 +21,19 @@ static void dump_hmd_imu() {
         vl_driver_log_hmd_imu(driver->hmd_imu_device);
 }
 
-static void dump_hmd_light() {
-    while(true)
-        vl_driver_log_hmd_light(driver->hmd_light_sensor_device);
-}
-
 static void send_hmd_on() {
     // turn the display on
     int hret = hid_send_feature_report(driver->hmd_device,
                                    vive_magic_power_on,
                                    sizeof(vive_magic_power_on));
     printf("power on magic: %d\n", hret);
+}
+
+static void dump_hmd_light() {
+    // hmd needs to be on to receive light reports.
+    send_hmd_on();
+    while(true)
+        vl_driver_log_hmd_light(driver->hmd_light_sensor_device);
 }
 
 static void dump_config_hmd() {
@@ -64,7 +66,9 @@ static void signal_interrupt_handler(int sig) {
     exit(0);
 }
 
-void run(void (*task)(void)) {
+typedef std::function<void(void)> taskfun;
+
+void run(taskfun task) {
     driver = vl_driver_init();
     if (driver == nullptr)
         return;
@@ -73,21 +77,19 @@ void run(void (*task)(void)) {
     vl_driver_close(driver);
 }
 
-typedef void (*taskfkt)(void);
-
-static std::map<std::string, taskfkt> dump_commands {
+static std::map<std::string, taskfun> dump_commands {
     { "hmd-imu", &dump_hmd_imu },
     { "hmd-light", &dump_hmd_light },
     { "hmd-config", &dump_config_hmd }
 };
 
-static std::map<std::string, taskfkt> send_commands {
+static std::map<std::string, taskfun> send_commands {
     { "hmd-on", &send_hmd_on },
     { "hmd-off", &send_hmd_off },
     { "controller-off", &send_controller_off }
 };
 
-static std::string commands_to_str(std::map<std::string, taskfkt> commands) {
+static std::string commands_to_str(std::map<std::string, taskfun> commands) {
     std::string str;
     for (const auto& cm : commands)
         str += "  " + cm.first + "\n";
@@ -114,8 +116,8 @@ static void argument_error(const char * arg) {
     print_usage();
 }
 
-taskfkt check_command(char *argv[], const std::map<std::string, taskfkt>& commands) {
-    taskfkt task = NULL;
+taskfun _get_task_fun(char *argv[], const std::map<std::string, taskfun>& commands) {
+    taskfun task = NULL;
     for (const auto& cm : commands)
         if (compare(cm.first, argv[2]))
             task = cm.second;
@@ -127,15 +129,15 @@ taskfkt check_command(char *argv[], const std::map<std::string, taskfkt>& comman
 }
 
 int main(int argc, char *argv[]) {
-    taskfkt task = NULL;
+    taskfun task = NULL;
 
     if ( argc < 3 ) {
         print_usage();
     } else {
         if (compare(argv[1], "dump")) {
-            task = check_command(argv, dump_commands);
+            task = _get_task_fun(argv, dump_commands);
         } else if (compare(argv[1], "send")) {
-            task = check_command(argv, send_commands);
+            task = _get_task_fun(argv, send_commands);
         } else {
             argument_error(argv[1]);
             return 0;
