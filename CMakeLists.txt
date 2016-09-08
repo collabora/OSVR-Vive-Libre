@@ -24,6 +24,16 @@ find_package(Eigen3 REQUIRED)
 PKG_CHECK_MODULES (HIDAPI REQUIRED hidapi-libusb)
 PKG_CHECK_MODULES (ZLIB REQUIRED zlib)
 
+function(add_cxxflag FLAG)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FLAG}" PARENT_SCOPE)
+endfunction(add_cxxflag)
+
+# enable some gcc warnings
+add_cxxflag("-Wall -Wno-long-long -pedantic -Wextra -Wundef -Woverflow")
+add_cxxflag("-Woverloaded-virtual -Wformat=2 -Wpointer-arith -Wcast-qual")
+add_cxxflag("-Wlogical-op -Wredundant-decls")
+#add_cxxflag("-Wmissing-declarations")
+
 include_directories(${EIGEN3_INCLUDE_DIR} ${HIDAPI_INCLUDE_DIRS} src)
 
 # Build the plugin

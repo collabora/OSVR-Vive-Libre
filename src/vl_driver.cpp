@@ -43,7 +43,7 @@ vl_driver* vl_driver_init() {
     return drv;
 }
 
-bool vl_driver_init_devices(vl_driver *drv) {
+bool vl_driver_init_devices(vl_driver *drv, unsigned index) {
     // Probe for devices
     std::vector<int> paths = vl_driver_get_device_paths(HTC_ID, VIVE_HMD);
     if(paths.size() <= 0) {
@@ -51,10 +51,7 @@ bool vl_driver_init_devices(vl_driver *drv) {
         return false;
     }
 
-    // Open default device (0)
-    int index = 0;
-
-    if(index >= 0 && index < paths.size()){
+    if(index < paths.size()){
         return vl_driver_open_devices(drv, paths[index]);
     } else {
         printf("no device with index: %d\n", index);
@@ -131,7 +128,7 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
 
             if (ret == NULL) {
                 char* path = _hid_to_unix_path(cur_dev->path);
-                printf("Opening failed. Is another driver running? Do you have the correct udev rules in place?\nTry: sudo chmod 666 %s\n", path, path);
+                printf("Opening failed. Is another driver running? Do you have the correct udev rules in place?\nTry: sudo chmod 666 %s\n", path);
                 free(path);
                 hid_free_enumeration(devs);
                 return NULL;
@@ -164,8 +161,6 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
 
 bool vl_driver_open_devices(vl_driver* drv, int idx)
 {
-    int hret = 0;
-
     // Open the HMD device
     drv->hmd_device = open_device_idx(HTC_ID, VIVE_HMD, 0, 1, idx);
     if(!drv->hmd_device)

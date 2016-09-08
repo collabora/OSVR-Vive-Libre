@@ -106,7 +106,7 @@ inline static void vl_msg_print_hmd_imu(vive_headset_imu_report* pkt) {
             printf("      rot[%d]: %d\n", j, pkt->samples[i].rot[j]);
         }
 
-        printf("time_ticks: %zd\n", pkt->samples[i].time_ticks);
+        printf("time_ticks: %u\n", pkt->samples[i].time_ticks);
         printf("seq: %u\n", pkt->samples[i].seq);
         printf("\n");
     }
@@ -138,14 +138,14 @@ inline static void vl_msg_print_hmd_light(vive_headset_lighthouse_pulse_report2*
             continue;
         printf("     sensor_id[%d]: %u\n", i, pkt->samples[i].sensor_id);
         printf("      length[%d]: %d\n", i, pkt->samples[i].length);
-        printf("      time[%d]: %zd\n", i, pkt->samples[i].time);
+        printf("      time[%d]: %u\n", i, pkt->samples[i].time);
         printf("\n");
     }
 }
 
 inline static void vl_msg_print_hmd_light_csv(vive_headset_lighthouse_pulse_report2* pkt) {
     for(int i = 0; i < 9; i++){
-        printf("%zd, %u, %d\n", pkt->samples[i].time, pkt->samples[i].sensor_id, pkt->samples[i].length);
+        printf("%u, %u, %d\n", pkt->samples[i].time, pkt->samples[i].sensor_id, pkt->samples[i].length);
     }
 }
 
@@ -228,7 +228,7 @@ inline static void vl_msg_print_watchman(vive_controller_report1 * pkt) {
     */
 
     vive_controller_message* msg = &pkt->message;
-    printf("type %d %d buttons: %d\n", msg->type1, msg->type2, msg->unknown);
+    printf("type %d %d buttons\n", msg->type1, msg->type2);
 }
 
 

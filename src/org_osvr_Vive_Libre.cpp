@@ -49,7 +49,7 @@ static const auto PREFIX = "[vive-libre] ";
 
 void vl_print(std::string s) {
     std::cout << PREFIX << s << std::endl;
-};
+}
 
 class TrackerDevice {
 
@@ -117,7 +117,7 @@ class HardwareDetection {
         vl_print("Detecting Vive Hardware.");
         // init vive-libre
         this->vive = vl_driver_init();
-        m_found = vl_driver_init_devices(this->vive);
+        m_found = vl_driver_init_devices(this->vive, 0);
     }
     ~HardwareDetection() {
         vl_print("Shutting Down.");
