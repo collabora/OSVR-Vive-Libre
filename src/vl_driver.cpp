@@ -38,10 +38,11 @@ static std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id)
 
 vl_driver::vl_driver() {
     previous_ticks = 0;
-    sensor_fusion = vl_fusion();
+
 }
 
 vl_driver::~vl_driver() {
+    delete(sensor_fusion);
     hid_close(hmd_device);
     hid_close(hmd_imu_device);
     hid_close(watchman_dongle_device);
@@ -179,6 +180,8 @@ bool vl_driver::open_devices(int idx)
     //hret = hid_send_feature_report(drv->hmd_device, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
     //printf("enable lighthouse magic: %d\n", hret);
 
+        sensor_fusion = new vl_fusion();
+
     return true;
 cleanup:
     return false;
@@ -300,7 +303,7 @@ static int get_lowest_index(uint8_t s0, uint8_t s1, uint8_t s2) {
          :                              0;
 }
 
-void _update_pose(vl_driver* drv, unsigned char *buffer, int size) {
+void vl_driver::_update_pose(unsigned char *buffer, int size) {
     vive_headset_imu_report pkt;
     vl_msg_decode_hmd_imu(&pkt, buffer, size);
 
@@ -314,17 +317,17 @@ void _update_pose(vl_driver* drv, unsigned char *buffer, int size) {
 
         vive_headset_imu_sample sample = pkt.samples[index];
 
-        if (drv->previous_ticks == 0) {
-            drv->previous_ticks = sample.time_ticks;
+        if (previous_ticks == 0) {
+            previous_ticks = sample.time_ticks;
             continue;
         }
 
-        if (is_timestamp_valid(sample.time_ticks, drv->previous_ticks)) {
-            float dt = FREQ_48MHZ * (sample.time_ticks - drv->previous_ticks);
+        if (is_timestamp_valid(sample.time_ticks, previous_ticks)) {
+            float dt = FREQ_48MHZ * (sample.time_ticks - previous_ticks);
             Eigen::Vector3d vec3_gyro = vec3_from_gyro(sample.rot);
             Eigen::Vector3d vec3_accel = vec3_from_accel(sample.acc);
-            drv->sensor_fusion.update(dt, vec3_gyro, vec3_accel);
-            drv->previous_ticks = pkt.samples[index].time_ticks;
+            sensor_fusion->update(dt, vec3_gyro, vec3_accel);
+            previous_ticks = pkt.samples[index].time_ticks;
         }
     }
 }
@@ -333,7 +336,7 @@ void _update_pose(vl_driver* drv, unsigned char *buffer, int size) {
 void vl_driver::update_pose() {
 
     read_fun update_pose_fun = [this](unsigned char *buffer, int size) {
-        _update_pose(this, buffer, size);
+        this->_update_pose(buffer, size);
     };
 
     static std::map<vl_message, read_fun> message_parsers {

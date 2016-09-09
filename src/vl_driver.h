@@ -51,7 +51,7 @@ class vl_driver {
     hid_device* watchman_dongle_device;
     hid_device* hmd_light_sensor_device;
     uint32_t previous_ticks;
-    vl_fusion sensor_fusion;
+    vl_fusion *sensor_fusion;
 
 
     vl_driver();
@@ -59,6 +59,8 @@ class vl_driver {
     bool init_devices(unsigned index);
     bool open_devices(int idx);
     void update_pose();
+
+    void _update_pose(unsigned char *buffer, int size);
 };
 
 

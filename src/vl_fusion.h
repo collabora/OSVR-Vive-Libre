@@ -27,17 +27,18 @@
 #pragma once
 
 #include <Eigen/Geometry>
+#include <list>
 
 #define FILTER_QUEUE_MAX_SIZE 256
 class vl_filter_queue {
-    int at, size;
-    Eigen::Vector3d elems[FILTER_QUEUE_MAX_SIZE];
+    unsigned size;
+    //Eigen::Vector3d elems[FILTER_QUEUE_MAX_SIZE];
+    std::list<Eigen::Vector3d> queue;
 
 public:
-    vl_filter_queue();
     vl_filter_queue(int size);
     ~vl_filter_queue();
-    void add(const Eigen::Vector3d *vec);
+    void add(const Eigen::Vector3d &vec);
     Eigen::Vector3d get_mean();
 };
 
@@ -51,8 +52,8 @@ private:
 	int iterations;
 
 	// filter queues for magnetometer, accelerometers and angular velocity
-    vl_filter_queue fq_acceleration;
-    vl_filter_queue fq_angular_velocity;
+    vl_filter_queue* fq_acceleration;
+    vl_filter_queue* fq_angular_velocity;
 
 	// gravity correction
     int device_level_count;
@@ -67,7 +68,7 @@ public:
 
     vl_fusion();
     ~vl_fusion();
-    void update(float dt, Eigen::Vector3d vec3_gyro, Eigen::Vector3d vec3_accel);
+    void update(float dt, const Eigen::Vector3d &vec3_gyro, const Eigen::Vector3d &vec3_accel);
 };
 
 

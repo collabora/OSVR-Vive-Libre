@@ -30,8 +30,8 @@
 
 vl_fusion::vl_fusion() {
     orientation = Eigen::Quaterniond(1,0,0,0);
-    fq_acceleration = vl_filter_queue(20);
-    fq_angular_velocity = vl_filter_queue(20);
+    fq_acceleration = new vl_filter_queue(20);
+    fq_angular_velocity = new vl_filter_queue(20);
     grav_gain = 0.05f;
 }
 
@@ -48,15 +48,15 @@ Eigen::Quaterniond* vl_fusion::correct_gravity(const Eigen::Vector3d* accelerati
     // if the device is within tolerance levels, count this as the device is level and add to the counter
     // otherwise reset the counter and start over
     if (ang_vel_length < ang_vel_tolerance && fabsf(acceleration->norm() - GRAVITY_EARTH) < gravity_tolerance)
-        this->device_level_count++;
+        device_level_count++;
 
 
     // device has been level for long enough, grab mean from the accelerometer filter queue (last n values)
     // and use for correction
-    if(this->device_level_count > 50){
-        this->device_level_count = 0;
+    if(device_level_count > 50){
+        device_level_count = 0;
 
-        Eigen::Vector3d acceleration_mean = this->fq_acceleration.get_mean();
+        Eigen::Vector3d acceleration_mean = this->fq_acceleration->get_mean();
         acceleration_mean.normalize();
 
         // Calculate a cross product between what the device
@@ -73,22 +73,22 @@ Eigen::Quaterniond* vl_fusion::correct_gravity(const Eigen::Vector3d* accelerati
                         -acceleration_mean.x());
             tilt_e.normalize();
 
-            this->grav_error_angle = tilt_angle;
-            this->grav_error_axis = tilt_e;
+            grav_error_angle = tilt_angle;
+            grav_error_axis = tilt_e;
         }
     }
 
     // preform gravity tilt correction
-    if(this->grav_error_angle > min_tilt_error){
+    if(grav_error_angle > min_tilt_error){
         double use_angle;
-        if(this->grav_error_angle > gravity_tolerance && this->iterations < 2000){
+        if(grav_error_angle > gravity_tolerance && iterations < 2000){
             // if less than 2000 iterations have passed, set the up axis to the correction value outright
-            use_angle = -this->grav_error_angle;
-            this->grav_error_angle = 0;
+            use_angle = -grav_error_angle;
+            grav_error_angle = 0;
         } else {
             // otherwise try to correct
-            use_angle = -this->grav_gain * this->grav_error_angle * 0.005f * (5.0f * ang_vel_length + 1.0f);
-            this->grav_error_angle += use_angle;
+            use_angle = -grav_gain * grav_error_angle * 0.005f * (5.0f * ang_vel_length + 1.0f);
+            grav_error_angle += use_angle;
         }
 
         // perform the correction
@@ -98,36 +98,37 @@ Eigen::Quaterniond* vl_fusion::correct_gravity(const Eigen::Vector3d* accelerati
     return NULL;
 }
 
-vl_filter_queue::vl_filter_queue() {}
+//vl_filter_queue::vl_filter_queue() {}
 vl_filter_queue::~vl_filter_queue() {}
 vl_filter_queue::vl_filter_queue(int size) {
     this->size = size;
 }
 
-void vl_filter_queue::add(const Eigen::Vector3d* vec)
+void vl_filter_queue::add(const Eigen::Vector3d& vec)
 {
-    this->elems[this->at] = *vec;
-    int x = this->at + 1;
-    this->at = x % this->size;
+    //printf("pushing! size %lu", queue.size());
+    queue.push_back(vec);
+    if (queue.size() > size)
+        queue.pop_front();
 }
 
 Eigen::Vector3d vl_filter_queue::get_mean()
 {
     Eigen::Vector3d mean;
-    for(int i = 0; i < this->size; i++)
-        mean += this->elems[i];
-    return mean / (double)this->size;
+    for(Eigen::Vector3d vec : queue)
+        mean += vec;
+    return mean / (double)queue.size();
 }
 
 
-void vl_fusion::update(float dt, Eigen::Vector3d angular_velocity, Eigen::Vector3d acceleration)
+void vl_fusion::update(float dt, const Eigen::Vector3d& angular_velocity, const Eigen::Vector3d& acceleration)
 {
-    Eigen::Vector3d acceleration_world = this->orientation * acceleration;
+    Eigen::Vector3d acceleration_world = orientation * acceleration;
 
-    this->iterations += 1;
+    iterations += 1;
 
-    this->fq_acceleration.add(&acceleration_world);
-    this->fq_angular_velocity.add(&angular_velocity);
+    fq_acceleration->add(acceleration_world);
+    fq_angular_velocity->add(angular_velocity);
 
     float ang_vel_length = angular_velocity.norm();
 
@@ -135,17 +136,17 @@ void vl_fusion::update(float dt, Eigen::Vector3d angular_velocity, Eigen::Vector
         Eigen::Vector3d rot_axis = angular_velocity.normalized();
         //Eigen::Vector3d rot_axis = -angular_velocity.normalized();
         float rot_angle = ang_vel_length * dt;
-        this->orientation = this->orientation * Eigen::AngleAxisd(rot_angle, rot_axis);
+        orientation = orientation * Eigen::AngleAxisd(rot_angle, rot_axis);
     }
 
     // gravity correction
-    Eigen::Quaterniond* correction = this->correct_gravity(&acceleration, ang_vel_length);
+    Eigen::Quaterniond* correction = correct_gravity(&acceleration, ang_vel_length);
     if (correction != NULL) {
-        this->orientation = *correction * this->orientation;
+        orientation = *correction * orientation;
         delete(correction);
     }
 
     // mitigate drift due to floating point
     // inprecision with quat multiplication.
-    this->orientation.normalize();
+    orientation.normalize();
 }

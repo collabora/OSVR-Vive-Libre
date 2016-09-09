@@ -92,7 +92,7 @@ class TrackerDevice {
         vive->update_pose();
 
         if (vive->previous_ticks != 0) {
-            Eigen::Quaterniond pose_vl = vive->sensor_fusion.orientation;
+            Eigen::Quaterniond pose_vl = vive->sensor_fusion->orientation;
 
             //Fix transformation
             Eigen::AngleAxisd rotation_fix(0.5*M_PI, Eigen::Vector3d::UnitY());
