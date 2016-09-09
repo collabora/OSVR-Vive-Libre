@@ -160,31 +160,29 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
 bool vl_driver::open_devices(int idx)
 {
     // Open the HMD device
-    this->hmd_device = open_device_idx(HTC_ID, VIVE_HMD, 0, 1, idx);
-    if(!this->hmd_device)
-        goto cleanup;
+    hmd_device = open_device_idx(HTC_ID, VIVE_HMD, 0, 1, idx);
+    if(!hmd_device)
+        return false;
 
     // Open the lighthouse device
-    this->hmd_imu_device = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 0, 2, idx);
-    if(!this->hmd_imu_device)
-        goto cleanup;
+    hmd_imu_device = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 0, 2, idx);
+    if(!hmd_imu_device)
+        return false;
 
-    this->hmd_light_sensor_device = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 1, 2, idx);
-    if(!this->hmd_light_sensor_device)
-        goto cleanup;
+    hmd_light_sensor_device = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 1, 2, idx);
+    if(!hmd_light_sensor_device)
+        return false;
 
-    this->watchman_dongle_device = open_device_idx(VALVE_ID, VIVE_WATCHMAN_DONGLE, 1, 2, idx);
-    if(!this->watchman_dongle_device)
-        goto cleanup;
+    watchman_dongle_device = open_device_idx(VALVE_ID, VIVE_WATCHMAN_DONGLE, 1, 2, idx);
+    if(!watchman_dongle_device)
+        return false;
 
     //hret = hid_send_feature_report(drv->hmd_device, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
     //printf("enable lighthouse magic: %d\n", hret);
 
-        sensor_fusion = new vl_fusion();
+    sensor_fusion = new vl_fusion();
 
     return true;
-cleanup:
-    return false;
 }
 
 static std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id)
