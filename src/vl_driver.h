@@ -60,7 +60,7 @@ class vl_driver {
     bool open_devices(int idx);
     void update_pose();
 
-    void _update_pose(unsigned char *buffer, int size);
+    void _update_pose(const vive_headset_imu_report &pkt);
 };
 
 

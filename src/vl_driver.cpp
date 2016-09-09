@@ -225,67 +225,58 @@ static Eigen::Vector3d vec3_from_gyro(const __s16* smp)
 
 typedef std::function<void(unsigned char*,int)> read_fun;
 
-void read_buffers(hid_device* dev, const std::map<vl_message, read_fun>& message_fun_map) {
+void read_buffers(hid_device* dev, read_fun fun) {
     int size = 0;
     unsigned char buffer[FEATURE_BUFFER_SIZE];
 
-    while((size = hid_read(dev, buffer, FEATURE_BUFFER_SIZE)) > 0) {
-        auto it = message_fun_map.find((vl_message)buffer[0]);
-        if (it != message_fun_map.end())
-            it->second(buffer, size);
-    }
+    while((size = hid_read(dev, buffer, FEATURE_BUFFER_SIZE)) > 0)
+        fun(buffer, size);
 
-    if(size < 0){
+    if(size < 0)
         printf("error reading from device\n");
-    }
 }
 
 
 void _log_watchman(unsigned char *buffer, int size) {
-    vive_controller_report1 pkt;
-    vl_msg_decode_watchman(&pkt, buffer, size);
-    vl_msg_print_watchman(&pkt);
+    if (buffer[0] == VL_MSG_WATCHMAN) {
+        vive_controller_report1 pkt;
+        vl_msg_decode_watchman(&pkt, buffer, size);
+        vl_msg_print_watchman(&pkt);
+    }
 }
 
 void _log_hmd_imu(unsigned char *buffer, int size) {
-    vive_headset_imu_report pkt;
-    vl_msg_decode_hmd_imu(&pkt, buffer, size);
-    vl_msg_print_hmd_imu(&pkt);
+    printf("decoding hmd imu\n");
+    if (buffer[0] == VL_MSG_HMD_IMU) {
+        vive_headset_imu_report pkt;
+        vl_msg_decode_hmd_imu(&pkt, buffer, size);
+        vl_msg_print_hmd_imu(&pkt);
+    }
 }
 
 void _log_hmd_light(unsigned char *buffer, int size) {
-    vive_headset_lighthouse_pulse_report2 pkt;
-    vl_msg_decode_hmd_light(&pkt, buffer, size);
-    //vl_msg_print_hmd_light(&pkt);
-    vl_msg_print_hmd_light_csv(&pkt);
-}
-
-void _log_controller_light(unsigned char *buffer, int size) {
-    vive_headset_lighthouse_pulse_report1 pkt;
-    vl_msg_decode_controller_light(&pkt, buffer, size);
-    vl_msg_print_controller_light(&pkt);
+    if (buffer[0] == VL_MSG_HMD_LIGHT) {
+        vive_headset_lighthouse_pulse_report2 pkt;
+        vl_msg_decode_hmd_light(&pkt, buffer, size);
+        //vl_msg_print_hmd_light(&pkt);
+        vl_msg_print_hmd_light_csv(&pkt);
+    } else if (buffer[0] == VL_MSG_CONTROLLER_LIGHT) {
+        vive_headset_lighthouse_pulse_report1 pkt;
+        vl_msg_decode_controller_light(&pkt, buffer, size);
+        vl_msg_print_controller_light(&pkt);
+    }
 }
 
 void vl_driver_log_watchman(hid_device *dev) {
-    static std::map<vl_message, read_fun> message_parsers {
-        {VL_MSG_WATCHMAN, &_log_watchman},
-    };
-    read_buffers(dev, message_parsers);
+    read_buffers(dev, &_log_watchman);
 }
 
 void vl_driver_log_hmd_imu(hid_device* dev) {
-    static std::map<vl_message, read_fun> message_parsers {
-        {VL_MSG_HMD_IMU, &_log_hmd_imu},
-    };
-    read_buffers(dev, message_parsers);
+    read_buffers(dev, &_log_hmd_imu);
 }
 
 void vl_driver_log_hmd_light(hid_device* dev) {
-    static std::map<vl_message, read_fun> message_parsers {
-        {VL_MSG_HMD_LIGHT, &_log_hmd_light},
-        {VL_MSG_CONTROLLER_LIGHT, &_log_controller_light}
-    };
-    read_buffers(dev, message_parsers);
+    read_buffers(dev, &_log_hmd_light);
 }
 
 static bool is_timestamp_valid(uint32_t t1, uint32_t t2) {
@@ -301,10 +292,7 @@ static int get_lowest_index(uint8_t s0, uint8_t s1, uint8_t s2) {
          :                              0;
 }
 
-void vl_driver::_update_pose(unsigned char *buffer, int size) {
-    vive_headset_imu_report pkt;
-    vl_msg_decode_hmd_imu(&pkt, buffer, size);
-
+void vl_driver::_update_pose(const vive_headset_imu_report &pkt) {
     int li = get_lowest_index(
                 pkt.samples[0].seq,
                 pkt.samples[1].seq,
@@ -332,15 +320,16 @@ void vl_driver::_update_pose(unsigned char *buffer, int size) {
 
 
 void vl_driver::update_pose() {
+    int size = 0;
+    unsigned char buffer[FEATURE_BUFFER_SIZE];
 
-    read_fun update_pose_fun = [this](unsigned char *buffer, int size) {
-        this->_update_pose(buffer, size);
-    };
+    while((size = hid_read(hmd_imu_device, buffer, FEATURE_BUFFER_SIZE)) > 0)
+        if (buffer[0] == VL_MSG_HMD_IMU) {
+            vive_headset_imu_report pkt;
+            vl_msg_decode_hmd_imu(&pkt, buffer, size);
+            this->_update_pose(pkt);
+        }
 
-    static std::map<vl_message, read_fun> message_parsers {
-        {VL_MSG_HMD_IMU, update_pose_fun},
-    };
-
-    read_buffers(this->hmd_imu_device, message_parsers);
-
+    if(size < 0)
+        printf("error reading from device\n");
 }
