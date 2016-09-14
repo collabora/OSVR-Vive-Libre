@@ -21,6 +21,11 @@ static void dump_hmd_imu() {
         vl_driver_log_hmd_imu(driver->hmd_imu_device);
 }
 
+static void dump_hmd_imu_pose() {
+    while(true)
+        driver->update_pose();
+}
+
 static void send_hmd_on() {
     // turn the display on
     int hret = hid_send_feature_report(driver->hmd_device,
@@ -78,16 +83,17 @@ void run(taskfun task) {
 }
 
 static std::map<std::string, taskfun> dump_commands {
-    { "hmd-imu", &dump_hmd_imu },
-    { "hmd-light", &dump_hmd_light },
-    { "hmd-config", &dump_config_hmd },
-    { "controller", &dump_controller }
+    { "hmd-imu", dump_hmd_imu },
+    { "hmd-light", dump_hmd_light },
+    { "hmd-config", dump_config_hmd },
+    { "controller", dump_controller },
+    { "hmd-imu-pose", dump_hmd_imu_pose }
 };
 
 static std::map<std::string, taskfun> send_commands {
-    { "hmd-on", &send_hmd_on },
-    { "hmd-off", &send_hmd_off },
-    { "controller-off", &send_controller_off }
+    { "hmd-on", send_hmd_on },
+    { "hmd-off", send_hmd_off },
+    { "controller-off", send_controller_off }
 };
 
 static std::string commands_to_str(std::map<std::string, taskfun> commands) {
@@ -119,19 +125,17 @@ static void argument_error(const char * arg) {
 }
 
 taskfun _get_task_fun(char *argv[], const std::map<std::string, taskfun>& commands) {
-    taskfun task = NULL;
-    for (const auto& cm : commands)
-        if (compare(cm.first, argv[2]))
-            task = cm.second;
-
-    if (task == NULL)
+    auto search = commands.find(std::string(argv[2]));
+    if(search != commands.end()) {
+        return search->second;
+    } else {
         argument_error(argv[2]);
-
-    return task;
+        return nullptr;
+    }
 }
 
 int main(int argc, char *argv[]) {
-    taskfun task = NULL;
+    taskfun task = nullptr;
 
     if ( argc < 3 ) {
         print_usage();
@@ -148,6 +152,8 @@ int main(int argc, char *argv[]) {
 
     if (task)
         run(task);
+
+    printf("taks complete!\n");
 
     return 0;
 }

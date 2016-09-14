@@ -29,13 +29,16 @@
 #include "vl_math.h"
 
 vl_fusion::vl_fusion() {
-    orientation = Eigen::Quaterniond(1,0,0,0);
+    orientation = Eigen::Quaterniond(0, -1, 0, 0);
     fq_acceleration = new vl_filter_queue(20);
     fq_angular_velocity = new vl_filter_queue(20);
     grav_gain = 0.05f;
 }
 
-vl_fusion::~vl_fusion() {}
+vl_fusion::~vl_fusion() {
+    delete(fq_acceleration);
+    delete(fq_angular_velocity);
+}
 
 
 #define GRAVITY_EARTH 9.82f
@@ -95,34 +98,34 @@ Eigen::Quaterniond* vl_fusion::correct_gravity(const Eigen::Vector3d* accelerati
         return quat_init_axis(&this->grav_error_axis, use_angle);
     }
 
-    return NULL;
+    return nullptr;
 }
 
-//vl_filter_queue::vl_filter_queue() {}
 vl_filter_queue::~vl_filter_queue() {}
 vl_filter_queue::vl_filter_queue(int size) {
     this->size = size;
 }
 
-void vl_filter_queue::add(const Eigen::Vector3d& vec)
+void vl_filter_queue::add(Eigen::Vector3d vec)
 {
-    //printf("pushing! size %lu", queue.size());
-    queue.push_back(vec);
+    Eigen::Vector3d v = Eigen::Vector3d(vec.x(), vec.y(), vec.z());
+    queue.push_back(v);
     if (queue.size() > size)
         queue.pop_front();
 }
-
 Eigen::Vector3d vl_filter_queue::get_mean()
 {
     Eigen::Vector3d mean;
     for(Eigen::Vector3d vec : queue)
-        mean += vec;
+           mean += vec;
     return mean / (double)queue.size();
 }
 
 
 void vl_fusion::update(float dt, const Eigen::Vector3d& angular_velocity, const Eigen::Vector3d& acceleration)
 {
+    mutex_fusion_update.lock();
+
     Eigen::Vector3d acceleration_world = orientation * acceleration;
 
     iterations += 1;
@@ -141,7 +144,7 @@ void vl_fusion::update(float dt, const Eigen::Vector3d& angular_velocity, const 
 
     // gravity correction
     Eigen::Quaterniond* correction = correct_gravity(&acceleration, ang_vel_length);
-    if (correction != NULL) {
+    if (correction != nullptr) {
         orientation = *correction * orientation;
         delete(correction);
     }
@@ -149,4 +152,7 @@ void vl_fusion::update(float dt, const Eigen::Vector3d& angular_velocity, const 
     // mitigate drift due to floating point
     // inprecision with quat multiplication.
     orientation.normalize();
+
+    // print_eigen_quat("pose", &orientation);
+    mutex_fusion_update.unlock();
 }

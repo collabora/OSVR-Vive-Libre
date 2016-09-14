@@ -37,8 +37,8 @@ void vl_error(const char* msg) {
 static std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id);
 
 vl_driver::vl_driver() {
+    hid_init();
     previous_ticks = 0;
-
 }
 
 vl_driver::~vl_driver() {
@@ -47,6 +47,7 @@ vl_driver::~vl_driver() {
     hid_close(hmd_imu_device);
     hid_close(watchman_dongle_device);
     hid_close(hmd_light_sensor_device);
+    hid_exit();
 }
 
 bool vl_driver::init_devices(unsigned index) {
@@ -64,8 +65,6 @@ bool vl_driver::init_devices(unsigned index) {
         return false;
     }
 }
-
-
 
 static void print_info_string(int (*fun)(hid_device*, wchar_t*, size_t), const char* what, hid_device* device)
 {
@@ -319,17 +318,14 @@ void vl_driver::_update_pose(const vive_headset_imu_report &pkt) {
 }
 
 
-void vl_driver::update_pose() {
-    int size = 0;
-    unsigned char buffer[FEATURE_BUFFER_SIZE];
 
-    while((size = hid_read(hmd_imu_device, buffer, FEATURE_BUFFER_SIZE)) > 0)
+void vl_driver::update_pose() {
+    read_fun update_pose_fun = [this](unsigned char *buffer, int size) {
         if (buffer[0] == VL_MSG_HMD_IMU) {
             vive_headset_imu_report pkt;
             vl_msg_decode_hmd_imu(&pkt, buffer, size);
             this->_update_pose(pkt);
         }
-
-    if(size < 0)
-        printf("error reading from device\n");
+    };
+    read_buffers(hmd_imu_device, update_pose_fun);
 }

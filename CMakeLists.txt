@@ -86,3 +86,11 @@ add_executable(vivectl tools/vivectl.cpp)
 target_link_libraries(vivectl vive-libre)
 
 install(TARGETS vivectl DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+# tests
+
+add_executable(minimal-hid tests/minimal-hid.cpp)
+target_link_libraries(minimal-hid ${HIDAPI_LIBRARIES})
+
+add_executable(hid-enumerate tests/hid-enumerate.cpp)
+target_link_libraries(hid-enumerate ${HIDAPI_LIBRARIES})

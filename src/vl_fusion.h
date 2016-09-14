@@ -28,23 +28,27 @@
 
 #include <Eigen/Geometry>
 #include <list>
+#include <mutex>
 
 #define FILTER_QUEUE_MAX_SIZE 256
 class vl_filter_queue {
     unsigned size;
     //Eigen::Vector3d elems[FILTER_QUEUE_MAX_SIZE];
     std::list<Eigen::Vector3d> queue;
+    std::mutex mutex;
 
 public:
     vl_filter_queue(int size);
     ~vl_filter_queue();
-    void add(const Eigen::Vector3d &vec);
+    void add(Eigen::Vector3d vec);
     Eigen::Vector3d get_mean();
 };
 
 class vl_fusion {
 private:
 	int state;
+
+    std::mutex mutex_fusion_update;
 
     Eigen::Vector3d acceleration;
     Eigen::Vector3d angular_velocity;

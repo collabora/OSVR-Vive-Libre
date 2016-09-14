@@ -97,6 +97,7 @@ class TrackerDevice {
             //Fix transformation
             Eigen::AngleAxisd rotation_fix(0.5*M_PI, Eigen::Vector3d::UnitY());
             Eigen::Quaterniond q = rotation_fix * switch_coord_order(&pose_vl);
+            //Eigen::Quaterniond q = switch_coord_order(&pose_vl);
             Eigen::Quaterniond inv = eigen_quaternion_inverse_handedness(q);
 
             // Push pose to OSVR
