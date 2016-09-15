@@ -1,0 +1,49 @@
+#!/usr/bin/sh
+
+#export G_SLICE=always-malloc
+#export G_DEBUG=gc-friendly
+
+SCRIPT_DIR=valgrind
+SUPP_DIR=$SCRIPT_DIR/suppressions
+
+#COMMAND="./vivectl dump hmd-imu"
+#COMMAND="./vivectl send hmd-off"
+COMMAND="./hid-enumerate"
+#OMMAND="./vivectl dump hmd-imu-pose"
+
+ACTIVE_SUPPS=("--suppressions=$SUPP_DIR/hidapi.supp")
+
+VALGRIND_ARGS=("--leak-check=full"
+               "--show-leak-kinds=all"
+               "--error-limit=no"
+               "--tool=memcheck"
+               "--show-reachable=yes"
+               "--track-origins=yes"
+               "--leak-resolution=high"
+               "--num-callers=20"
+               "--errors-for-leak-kinds=definite")
+
+: '
+  "--error-exitcode=20"
+'
+
+if [ "$1" == "run" ]; then
+  echo "Running"
+  valgrind -v ${VALGRIND_ARGS[@]} ${ACTIVE_SUPPS[@]} $COMMAND
+elif [ "$1" == "capture" ]; then
+  echo "capture"
+  valgrind -v ${VALGRIND_ARGS[@]} \
+     --gen-suppressions=all \
+     --log-file=$SUPP_DIR/suppressions.log \
+    ${ACTIVE_SUPPS[@]} \
+    $COMMAND
+
+  cat $SUPP_DIR/suppressions.log | $SCRIPT_DIR/valgrind-parse-suppressions.awk > $SUPP_DIR/current.supp
+  ./valgrind/valgrind-make-fix-list.py $SUPP_DIR/current.supp > $SUPP_DIR/fix.supp
+  #./valgrind/valgrind-make-lib-suppressions.py > $SUPP_DIR/libs.supp  
+else
+  echo "Usage: $0 run | capture"
+  exit
+fi
+
+

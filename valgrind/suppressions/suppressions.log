@@ -1,0 +1,206 @@
+==17898== Memcheck, a memory error detector
+==17898== Copyright (C) 2002-2015, and GNU GPL'd, by Julian Seward et al.
+==17898== Using Valgrind-3.11.0 and LibVEX; rerun with -h for copyright info
+==17898== Command: ./hid-enumerate
+==17898== Parent PID: 17897
+==17898== 
+--17898-- 
+--17898-- Valgrind options:
+--17898--    -v
+--17898--    --leak-check=full
+--17898--    --show-leak-kinds=all
+--17898--    --error-limit=no
+--17898--    --tool=memcheck
+--17898--    --show-reachable=yes
+--17898--    --track-origins=yes
+--17898--    --leak-resolution=high
+--17898--    --num-callers=20
+--17898--    --errors-for-leak-kinds=definite
+--17898--    --gen-suppressions=all
+--17898--    --log-file=valgrind/suppressions/suppressions.log
+--17898--    --suppressions=valgrind/suppressions/hidapi.supp
+--17898-- Contents of /proc/version:
+--17898--   Linux version 4.7.2-1-ARCH (builduser@tobias) (gcc version 6.1.1 20160802 (GCC) ) #1 SMP PREEMPT Sat Aug 20 23:02:56 CEST 2016
+--17898-- 
+--17898-- Arch and hwcaps: AMD64, LittleEndian, amd64-cx16-lzcnt-rdtscp-sse3-avx-avx2-bmi
+--17898-- Page sizes: currently 4096, max supported 4096
+--17898-- Valgrind library directory: /usr/lib/valgrind
+--17898-- Reading syms from /home/bmonkey/workspace/vr/OSVR-Vive-Libre/hid-enumerate
+--17898-- Reading syms from /usr/lib/ld-2.24.so
+--17898-- Reading syms from /usr/lib/valgrind/memcheck-amd64-linux
+--17898--    object doesn't have a symbol table
+--17898--    object doesn't have a dynamic symbol table
+--17898-- Scheduler: using generic scheduler lock implementation.
+--17898-- Reading suppressions file: valgrind/suppressions/hidapi.supp
+--17898-- Reading suppressions file: /usr/lib/valgrind/default.supp
+==17898== embedded gdbserver: reading from /tmp/vgdb-pipe-from-vgdb-to-17898-by-bmonkey-on-???
+==17898== embedded gdbserver: writing to   /tmp/vgdb-pipe-to-vgdb-from-17898-by-bmonkey-on-???
+==17898== embedded gdbserver: shared mem   /tmp/vgdb-pipe-shared-mem-vgdb-17898-by-bmonkey-on-???
+==17898== 
+==17898== TO CONTROL THIS PROCESS USING vgdb (which you probably
+==17898== don't want to do, unless you know exactly what you're doing,
+==17898== or are doing some strange experiment):
+==17898==   /usr/lib/valgrind/../../bin/vgdb --pid=17898 ...command...
+==17898== 
+==17898== TO DEBUG THIS PROCESS USING GDB: start GDB like this
+==17898==   /path/to/gdb ./hid-enumerate
+==17898== and then give GDB the following command
+==17898==   target remote | /usr/lib/valgrind/../../bin/vgdb --pid=17898
+==17898== --pid is optional if only one valgrind process is running
+==17898== 
+--17898-- REDIR: 0x401aad0 (ld-linux-x86-64.so.2:strlen) redirected to 0x3809d191 (???)
+--17898-- Reading syms from /usr/lib/valgrind/vgpreload_core-amd64-linux.so
+--17898--    object doesn't have a symbol table
+--17898-- Reading syms from /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so
+--17898--    object doesn't have a symbol table
+==17898== WARNING: new redirection conflicts with existing -- ignoring it
+--17898--     old: 0x0401aad0 (strlen              ) R-> (0000.0) 0x3809d191 ???
+--17898--     new: 0x0401aad0 (strlen              ) R-> (2007.0) 0x04c2ce50 strlen
+--17898-- REDIR: 0x4019420 (ld-linux-x86-64.so.2:index) redirected to 0x4c2ca00 (index)
+--17898-- REDIR: 0x4019640 (ld-linux-x86-64.so.2:strcmp) redirected to 0x4c2df50 (strcmp)
+--17898-- REDIR: 0x401b5e0 (ld-linux-x86-64.so.2:mempcpy) redirected to 0x4c312e0 (mempcpy)
+--17898-- Reading syms from /usr/lib/libhidapi-libusb.so.0.0.0
+--17898--    object doesn't have a symbol table
+--17898-- Reading syms from /usr/lib/libstdc++.so.6.0.22
+--17898-- Reading syms from /usr/lib/libm-2.24.so
+--17898--    object doesn't have a symbol table
+--17898-- Reading syms from /usr/lib/libgcc_s.so.1
+--17898-- Reading syms from /usr/lib/libc-2.24.so
+--17898-- Reading syms from /usr/lib/librt-2.24.so
+--17898--    object doesn't have a symbol table
+--17898-- Reading syms from /usr/lib/libusb-1.0.so.0.1.0
+--17898--    object doesn't have a symbol table
+--17898-- Reading syms from /usr/lib/libpthread-2.24.so
+--17898-- Reading syms from /usr/lib/libudev.so.1.6.5
+--17898--    object doesn't have a symbol table
+--17898-- Reading syms from /usr/lib/libresolv-2.24.so
+--17898--    object doesn't have a symbol table
+--17898-- Reading syms from /usr/lib/libcap.so.2.25
+--17898--    object doesn't have a symbol table
+--17898-- REDIR: 0x59644d0 (libc.so.6:strcasecmp) redirected to 0x4a256ae (_vgnU_ifunc_wrapper)
+--17898-- REDIR: 0x595ff80 (libc.so.6:strcspn) redirected to 0x4a256ae (_vgnU_ifunc_wrapper)
+--17898-- REDIR: 0x59667c0 (libc.so.6:strncasecmp) redirected to 0x4a256ae (_vgnU_ifunc_wrapper)
+--17898-- REDIR: 0x59623f0 (libc.so.6:strpbrk) redirected to 0x4a256ae (_vgnU_ifunc_wrapper)
+--17898-- REDIR: 0x5962780 (libc.so.6:strspn) redirected to 0x4a256ae (_vgnU_ifunc_wrapper)
+--17898-- REDIR: 0x5963b50 (libc.so.6:memmove) redirected to 0x4a256ae (_vgnU_ifunc_wrapper)
+--17898-- REDIR: 0x595e9d0 (libc.so.6:strcmp) redirected to 0x4a256ae (_vgnU_ifunc_wrapper)
+--17898-- REDIR: 0x595e780 (libc.so.6:index) redirected to 0x4a256ae (_vgnU_ifunc_wrapper)
+--17898-- REDIR: 0x5964000 (libc.so.6:memset) redirected to 0x4a256ae (_vgnU_ifunc_wrapper)
+--17898-- REDIR: 0x5964320 (libc.so.6:stpcpy) redirected to 0x4a256ae (_vgnU_ifunc_wrapper)
+--17898-- REDIR: 0x595fe60 (libc.so.6:strcpy) redirected to 0x4a256ae (_vgnU_ifunc_wrapper)
+--17898-- REDIR: 0x5963710 (libc.so.6:bcmp) redirected to 0x4a256ae (_vgnU_ifunc_wrapper)
+--17898-- REDIR: 0x5963190 (libc.so.6:strstr) redirected to 0x4a256ae (_vgnU_ifunc_wrapper)
+--17898-- REDIR: 0x5968ec0 (libc.so.6:memcpy@@GLIBC_2.14) redirected to 0x4a256ae (_vgnU_ifunc_wrapper)
+--17898-- REDIR: 0x5964200 (libc.so.6:mempcpy) redirected to 0x4a256ae (_vgnU_ifunc_wrapper)
+--17898-- REDIR: 0x5960820 (libc.so.6:strncmp) redirected to 0x4a256ae (_vgnU_ifunc_wrapper)
+--17898-- REDIR: 0x59620c0 (libc.so.6:strncpy) redirected to 0x4a256ae (_vgnU_ifunc_wrapper)
+--17898-- REDIR: 0x5962100 (libc.so.6:rindex) redirected to 0x4c2c6e0 (rindex)
+--17898-- REDIR: 0x595acf0 (libc.so.6:malloc) redirected to 0x4c29b50 (malloc)
+--17898-- REDIR: 0x5960420 (libc.so.6:strlen) redirected to 0x4c2cd90 (strlen)
+--17898-- REDIR: 0x5960870 (libc.so.6:__GI_strncmp) redirected to 0x4c2d540 (__GI_strncmp)
+--17898-- REDIR: 0x595b6e0 (libc.so.6:calloc) redirected to 0x4c2b9c4 (calloc)
+--17898-- REDIR: 0x5963c60 (libc.so.6:memcpy@GLIBC_2.2.5) redirected to 0x4c2e0b0 (memcpy@GLIBC_2.2.5)
+--17898-- REDIR: 0x595b2f0 (libc.so.6:free) redirected to 0x4c2ad22 (free)
+--17898-- REDIR: 0x596a2c0 (libc.so.6:rawmemchr) redirected to 0x4c30e40 (rawmemchr)
+--17898-- REDIR: 0x5962d20 (libc.so.6:__GI_strstr) redirected to 0x4c31540 (__strstr_sse2)
+--17898-- REDIR: 0x59633c0 (libc.so.6:memchr) redirected to 0x4c2dff0 (memchr)
+--17898-- REDIR: 0x5a08bc0 (libc.so.6:__memset_avx2_unaligned_erms) redirected to 0x4c304b0 (memset)
+--17898-- REDIR: 0x5a08780 (libc.so.6:__memcpy_avx_unaligned_erms) redirected to 0x4c30570 (memmove)
+--17898-- REDIR: 0x59754e0 (libc.so.6:__stpcpy_sse2_unaligned) redirected to 0x4c30110 (__stpcpy_sse2_unaligned)
+--17898-- REDIR: 0x596a4d0 (libc.so.6:strchrnul) redirected to 0x4c30e10 (strchrnul)
+--17898-- REDIR: 0x5963c40 (libc.so.6:__GI_mempcpy) redirected to 0x4c31010 (__GI_mempcpy)
+--17898-- REDIR: 0x5a236d0 (libc.so.6:__memcmp_sse4_1) redirected to 0x4c2fc90 (__memcmp_sse4_1)
+--17898-- REDIR: 0x5a08760 (libc.so.6:__mempcpy_avx_unaligned_erms) redirected to 0x4c30f20 (mempcpy)
+--17898-- REDIR: 0x595b3a0 (libc.so.6:realloc) redirected to 0x4c2bb90 (realloc)
+--17898-- REDIR: 0x595e7b0 (libc.so.6:__GI_strchr) redirected to 0x4c2c840 (__GI_strchr)
+--17898-- REDIR: 0x596f280 (libc.so.6:__strcmp_sse2_unaligned) redirected to 0x4c2de10 (strcmp)
+--17898-- REDIR: 0x5a055b0 (libc.so.6:__strspn_sse42) redirected to 0x4c316e0 (strspn)
+--17898-- REDIR: 0x5978570 (libc.so.6:__strstr_sse2_unaligned) redirected to 0x4c314d0 (strstr)
+--17898-- REDIR: 0x5973ed0 (libc.so.6:__strcpy_sse2_unaligned) redirected to 0x4c2ce70 (strcpy)
+--17898-- REDIR: 0x5974500 (libc.so.6:__strncpy_sse2_unaligned) redirected to 0x4c2d3a0 (__strncpy_sse2_unaligned)
+--17898-- REDIR: 0x5964360 (libc.so.6:__GI_stpcpy) redirected to 0x4c2ff70 (__GI_stpcpy)
+--17898-- REDIR: 0x5963750 (libc.so.6:__GI_memcmp) redirected to 0x4c2fb30 (__GI_memcmp)
+--17898-- REDIR: 0x595ea10 (libc.so.6:__GI_strcmp) redirected to 0x4c2de60 (__GI_strcmp)
+--17898-- REDIR: 0x59605c0 (libc.so.6:strnlen) redirected to 0x4c2cd30 (strnlen)
+--17898-- Reading syms from /usr/lib/gconv/UTF-16.so
+--17898--    object doesn't have a symbol table
+--17898-- REDIR: 0x5a056d0 (libc.so.6:__strcasecmp_avx) redirected to 0x4c2d690 (strcasecmp)
+--17898-- REDIR: 0x5979fe0 (libc.so.6:wcslen) redirected to 0x4c31830 (wcslen)
+--17898-- Discarding syms at 0x76d86e0-0x76d9e21 in /usr/lib/gconv/UTF-16.so due to munmap()
+==17898== 
+==17898== HEAP SUMMARY:
+==17898==     in use at exit: 80,896 bytes in 3 blocks
+==17898==   total heap usage: 8,554 allocs, 8,551 frees, 3,872,837 bytes allocated
+==17898== 
+==17898== Searching for pointers to 3 not-freed blocks
+==17898== Checked 175,992 bytes
+==17898== 
+==17898== 4,096 bytes in 1 blocks are still reachable in loss record 1 of 3
+==17898==    at 0x4C29BBE: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==17898==    by 0x403310F: ??? (in /usr/lib/libudev.so.1.6.5)
+==17898==    by 0x40373E0: ??? (in /usr/lib/libudev.so.1.6.5)
+==17898==    by 0x5E9618C: ??? (in /usr/lib/libusb-1.0.so.0.1.0)
+==17898==    by 0x5E93D50: ??? (in /usr/lib/libusb-1.0.so.0.1.0)
+==17898==    by 0x5E8C18C: libusb_init (in /usr/lib/libusb-1.0.so.0.1.0)
+==17898==    by 0x4E38CE3: hid_init (in /usr/lib/libhidapi-libusb.so.0.0.0)
+==17898==    by 0x4008A2: main (hid-enumerate.cpp:32)
+==17898== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   obj:/usr/lib/libudev.so.1.6.5
+   obj:/usr/lib/libudev.so.1.6.5
+   obj:/usr/lib/libusb-1.0.so.0.1.0
+   obj:/usr/lib/libusb-1.0.so.0.1.0
+   fun:libusb_init
+   fun:hid_init
+   fun:main
+}
+==17898== 4,096 bytes in 1 blocks are still reachable in loss record 2 of 3
+==17898==    at 0x4C29BBE: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==17898==    by 0x403310F: ??? (in /usr/lib/libudev.so.1.6.5)
+==17898==    by 0x4032A4B: ??? (in /usr/lib/libudev.so.1.6.5)
+==17898==    by 0x403B41B: ??? (in /usr/lib/libudev.so.1.6.5)
+==17898==    by 0x4039582: ??? (in /usr/lib/libudev.so.1.6.5)
+==17898==    by 0x4036F7F: ??? (in /usr/lib/libudev.so.1.6.5)
+==17898==    by 0x403C2E6: ??? (in /usr/lib/libudev.so.1.6.5)
+==17898==    by 0x403416B: udev_enumerate_scan_devices (in /usr/lib/libudev.so.1.6.5)
+==17898==    by 0x5E96194: ??? (in /usr/lib/libusb-1.0.so.0.1.0)
+==17898==    by 0x5E93D50: ??? (in /usr/lib/libusb-1.0.so.0.1.0)
+==17898==    by 0x5E8C18C: libusb_init (in /usr/lib/libusb-1.0.so.0.1.0)
+==17898==    by 0x4E38CE3: hid_init (in /usr/lib/libhidapi-libusb.so.0.0.0)
+==17898==    by 0x4008A2: main (hid-enumerate.cpp:32)
+==17898== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   obj:/usr/lib/libudev.so.1.6.5
+   obj:/usr/lib/libudev.so.1.6.5
+   obj:/usr/lib/libudev.so.1.6.5
+   obj:/usr/lib/libudev.so.1.6.5
+   obj:/usr/lib/libudev.so.1.6.5
+   obj:/usr/lib/libudev.so.1.6.5
+   fun:udev_enumerate_scan_devices
+   obj:/usr/lib/libusb-1.0.so.0.1.0
+   obj:/usr/lib/libusb-1.0.so.0.1.0
+   fun:libusb_init
+   fun:hid_init
+   fun:main
+}
+==17898== LEAK SUMMARY:
+==17898==    definitely lost: 0 bytes in 0 blocks
+==17898==    indirectly lost: 0 bytes in 0 blocks
+==17898==      possibly lost: 0 bytes in 0 blocks
+==17898==    still reachable: 8,192 bytes in 2 blocks
+==17898==         suppressed: 72,704 bytes in 1 blocks
+==17898== 
+==17898== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 1 from 1)
+--17898-- 
+--17898-- used_suppression:      1 LD static valgrind/suppressions/hidapi.supp:33 suppressed: 72,704 bytes in 1 blocks
+--17898-- used_suppression:      1 dl-hack3-cond-1 /usr/lib/valgrind/default.supp:1218
+==17898== 
+==17898== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 1 from 1)

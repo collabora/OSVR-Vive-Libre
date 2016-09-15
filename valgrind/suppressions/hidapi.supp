@@ -1,0 +1,52 @@
+{
+   hid_open_path
+   Memcheck:Leak
+   ...
+   fun:hid_open_path
+   ...
+}
+
+{
+   libusb thread
+   Memcheck:Leak
+   ...
+   obj:/usr/lib/libusb-1.0.so.0.1.0
+   ...
+   fun:start_thread
+   ...
+}
+
+{
+   LD static
+   Memcheck:Leak
+   ...
+   fun:__static_initialization_and_destruction_0
+   ...
+}
+
+{
+   hid thread join timeout #1
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:_Znwm
+   fun:main
+}
+{
+   hid thread join timeout #2
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   obj:/usr/lib/libhidapi-libusb.so.0.0.0
+   fun:start_thread
+   fun:clone
+}
+
+{
+   hid init
+   Memcheck:Leak
+   ...
+   fun:libusb_init
+   fun:hid_init
+   ...
+}
+
