@@ -124,7 +124,7 @@ inline static bool vl_msg_decode_hmd_light(vive_headset_lighthouse_pulse_report2
     for(int j = 0; j < 9; j++){
         pkt->samples[j].sensor_id = read8(&buffer);
         pkt->samples[j].length = uread16(&buffer);
-        pkt->samples[j].time = uread32(&buffer);
+        pkt->samples[j].timestamp = uread32(&buffer);
     }
 
     return true;
@@ -134,18 +134,18 @@ inline static void vl_msg_print_hmd_light(vive_headset_lighthouse_pulse_report2*
     printf("== controller light sample ==\n");
     printf("  report_id: %u\n", pkt->report_id);
     for(int i = 0; i < 9; i++){
-        if (pkt->samples[i].time == UINT32_MAX)
+        if (pkt->samples[i].timestamp == UINT32_MAX)
             continue;
         printf("     sensor_id[%d]: %u\n", i, pkt->samples[i].sensor_id);
         printf("      length[%d]: %d\n", i, pkt->samples[i].length);
-        printf("      time[%d]: %u\n", i, pkt->samples[i].time);
+        printf("      time[%d]: %u\n", i, pkt->samples[i].timestamp);
         printf("\n");
     }
 }
 
 inline static void vl_msg_print_hmd_light_csv(vive_headset_lighthouse_pulse_report2* pkt) {
     for(int i = 0; i < 9; i++){
-        printf("%u, %u, %d\n", pkt->samples[i].time, pkt->samples[i].sensor_id, pkt->samples[i].length);
+        printf("%u, %u, %d\n", pkt->samples[i].timestamp, pkt->samples[i].sensor_id, pkt->samples[i].length);
     }
 }
 

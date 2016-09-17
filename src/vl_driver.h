@@ -63,6 +63,19 @@ class vl_driver {
     void _update_pose(const vive_headset_imu_report &pkt);
 };
 
+typedef std::function<void(unsigned char*,int)> query_fun;
+
+#define FEATURE_BUFFER_SIZE 256
+static inline void hid_query(hid_device* dev, query_fun fun) {
+    int size = 0;
+    unsigned char buffer[FEATURE_BUFFER_SIZE];
+
+    while((size = hid_read(dev, buffer, FEATURE_BUFFER_SIZE)) > 0)
+        fun(buffer, size);
+
+    if(size < 0)
+        printf("error reading from device\n");
+}
 
 void vl_driver_log_watchman(hid_device *dev);
 void vl_driver_log_hmd_light(hid_device *dev);

@@ -220,21 +220,6 @@ static Eigen::Vector3d vec3_from_gyro(const __s16* smp)
     return sample * VL_POW_2_M12; // 8/32768 = 2^-12
 }
 
-#define FEATURE_BUFFER_SIZE 256
-
-typedef std::function<void(unsigned char*,int)> read_fun;
-
-void read_buffers(hid_device* dev, read_fun fun) {
-    int size = 0;
-    unsigned char buffer[FEATURE_BUFFER_SIZE];
-
-    while((size = hid_read(dev, buffer, FEATURE_BUFFER_SIZE)) > 0)
-        fun(buffer, size);
-
-    if(size < 0)
-        printf("error reading from device\n");
-}
-
 
 void _log_watchman(unsigned char *buffer, int size) {
     if (buffer[0] == VL_MSG_WATCHMAN) {
@@ -245,7 +230,6 @@ void _log_watchman(unsigned char *buffer, int size) {
 }
 
 void _log_hmd_imu(unsigned char *buffer, int size) {
-    printf("decoding hmd imu\n");
     if (buffer[0] == VL_MSG_HMD_IMU) {
         vive_headset_imu_report pkt;
         vl_msg_decode_hmd_imu(&pkt, buffer, size);
@@ -267,15 +251,15 @@ void _log_hmd_light(unsigned char *buffer, int size) {
 }
 
 void vl_driver_log_watchman(hid_device *dev) {
-    read_buffers(dev, &_log_watchman);
+    hid_query(dev, &_log_watchman);
 }
 
 void vl_driver_log_hmd_imu(hid_device* dev) {
-    read_buffers(dev, &_log_hmd_imu);
+    hid_query(dev, &_log_hmd_imu);
 }
 
 void vl_driver_log_hmd_light(hid_device* dev) {
-    read_buffers(dev, &_log_hmd_light);
+    hid_query(dev, &_log_hmd_light);
 }
 
 static bool is_timestamp_valid(uint32_t t1, uint32_t t2) {
@@ -320,12 +304,12 @@ void vl_driver::_update_pose(const vive_headset_imu_report &pkt) {
 
 
 void vl_driver::update_pose() {
-    read_fun update_pose_fun = [this](unsigned char *buffer, int size) {
+    query_fun update_pose_fun = [this](unsigned char *buffer, int size) {
         if (buffer[0] == VL_MSG_HMD_IMU) {
             vive_headset_imu_report pkt;
             vl_msg_decode_hmd_imu(&pkt, buffer, size);
             this->_update_pose(pkt);
         }
     };
-    read_buffers(hmd_imu_device, update_pose_fun);
+    hid_query(hmd_imu_device, update_pose_fun);
 }

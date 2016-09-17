@@ -4,6 +4,7 @@
 #include <map>
 #include "vl_driver.h"
 #include "vl_config.h"
+#include "vl_light.h"
 
 vl_driver* driver;
 
@@ -44,6 +45,68 @@ static void dump_hmd_light() {
 static void dump_config_hmd() {
     char * config = vl_get_config(driver->hmd_imu_device);
     printf("hmd_imu_device config: %s\n", config);
+}
+
+
+
+static void dump_station_angle() {
+    send_hmd_on();
+
+    vl_lighthouse_samples * raw_light_samples = new vl_lighthouse_samples();
+
+    query_fun read_hmd_light = [raw_light_samples](unsigned char *buffer, int size) {
+        if (buffer[0] == VL_MSG_HMD_LIGHT) {
+            vive_headset_lighthouse_pulse_report2 pkt;
+            vl_msg_decode_hmd_light(&pkt, buffer, size);
+            vl_msg_print_hmd_light_csv(&pkt);
+
+            for(int i = 0; i < 9; i++){
+                raw_light_samples->push_back(pkt.samples[i]);
+            }
+        }
+    };
+
+    while(raw_light_samples->size() < 10000)
+        hid_query(driver->hmd_light_sensor_device, read_hmd_light);
+
+    vl_light_classify_samples(raw_light_samples);
+}
+
+static vl_lighthouse_samples parse_csv_file(std::string csv_file) {
+
+    vl_lighthouse_samples samples;
+    std::string line;
+    std::ifstream csv_stream(csv_file);
+
+    while(std::getline(csv_stream, line)) {
+        std::istringstream s(line);
+
+        std::string timestamp;
+        std::string id;
+        std::string length;
+
+        getline(s, timestamp,',');
+        getline(s, id,',');
+        getline(s, length,',');
+
+        vive_headset_lighthouse_pulse2 sample;
+
+        sample.timestamp = std::stoul(timestamp);
+        sample.sensor_id = std::stoul(id);
+        sample.length = std::stoul(length);
+
+        samples.push_back(sample);
+
+        //printf("int ts %u id %u length %u\n", sample.timestamp, sample.sensor_id, sample.length);
+    }
+
+    return samples;
+
+}
+
+static void dump_station_angle_from_csv() {
+    vl_lighthouse_samples samples = parse_csv_file("/home/bmonkey/workspace/vr/vive-libre-analysis-and-data/dumps/hmd-light-csv/b_c_still.csv");
+    vl_light_classify_samples(&samples);
 }
 
 static void send_hmd_off() {
@@ -87,7 +150,8 @@ static std::map<std::string, taskfun> dump_commands {
     { "hmd-light", dump_hmd_light },
     { "hmd-config", dump_config_hmd },
     { "controller", dump_controller },
-    { "hmd-imu-pose", dump_hmd_imu_pose }
+    { "hmd-imu-pose", dump_hmd_imu_pose },
+    { "lighthouse-angles", dump_station_angle }
 };
 
 static std::map<std::string, taskfun> send_commands {
@@ -144,6 +208,8 @@ int main(int argc, char *argv[]) {
             task = _get_task_fun(argv, dump_commands);
         } else if (compare(argv[1], "send")) {
             task = _get_task_fun(argv, send_commands);
+        } else if (compare(argv[1], "classify")) {
+            task = &dump_station_angle_from_csv;
         } else {
             argument_error(argv[1]);
             return 0;
@@ -152,8 +218,6 @@ int main(int argc, char *argv[]) {
 
     if (task)
         run(task);
-
-    printf("taks complete!\n");
 
     return 0;
 }

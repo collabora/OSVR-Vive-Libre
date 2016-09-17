@@ -51,7 +51,8 @@ set(SOURCES
     src/vl_messages.h
     src/vl_config.h
     src/vl_config.cpp
-    src/vl_math.h)
+    src/vl_math.h
+    src/vl_light.h)
 
 add_library(vive-libre SHARED ${SOURCES})
 target_link_libraries(vive-libre

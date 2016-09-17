@@ -6,6 +6,8 @@
 #ifndef __VIVE_HID_REPORTS_H__
 #define __VIVE_HID_REPORTS_H__
 
+#include <stdint.h>
+
 #include <asm/byteorder.h>
 
 #define VIVE_MAINBOARD_STATUS_REPORT_ID			0x03
@@ -170,16 +172,16 @@ struct vive_controller_report1 {
 #define VIVE_CONTROLLER_REPORT2_ID			0x24
 
 struct vive_controller_report2 {
-	__u8 id;
+        uint8_t id;
 	struct vive_controller_message message[2];
 } __attribute__((packed));
 
 #define VIVE_HEADSET_LIGHTHOUSE_PULSE_REPORT2_ID	0x25
 
 struct vive_headset_lighthouse_pulse2 {
-	__u8 sensor_id;
-	__le16 length;
-	__le32 time;
+        uint8_t sensor_id;
+        uint16_t length;
+        uint32_t timestamp;
 } __attribute__((packed));
 
 struct vive_headset_lighthouse_pulse_report2 {
