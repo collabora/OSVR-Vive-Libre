@@ -15,7 +15,7 @@
 
 typedef std::vector<vive_headset_lighthouse_pulse2> vl_lighthouse_samples;
 
-typedef std::function<bool(vive_headset_lighthouse_pulse2)> sample_filter;
+typedef std::function<bool(const vive_headset_lighthouse_pulse2&)> sample_filter;
 
 
 struct vl_light_sample_group {
@@ -27,7 +27,7 @@ struct vl_light_sample_group {
     vl_lighthouse_samples samples;
 };
 
-uint32_t median_timestamp(vl_lighthouse_samples samples) {
+uint32_t median_timestamp(const vl_lighthouse_samples& samples) {
     std::vector<uint32_t> timestamps;
 
     for (auto s : samples)
@@ -41,7 +41,7 @@ uint32_t median_timestamp(vl_lighthouse_samples samples) {
           return timestamps[size / 2];
 }
 
-uint16_t median_length(vl_lighthouse_samples samples) {
+uint16_t median_length(const vl_lighthouse_samples& samples) {
     std::vector<uint16_t> lengths;
 
     for (auto s : samples)
@@ -55,12 +55,12 @@ uint16_t median_length(vl_lighthouse_samples samples) {
           return lengths[size / 2];
 }
 
-void print_sample_group (vl_light_sample_group g) {
+void print_sample_group (const vl_light_sample_group& g) {
     printf("channel %c (len %d, samples %zu): skip %d, sweep %c epoch %u\n",
         g.channel, median_length(g.samples), g.samples.size(), g.skip, g.sweep, g.epoch);
 }
 
-unsigned unique_sensor_ids(vl_lighthouse_samples S) {
+unsigned unique_sensor_ids(const vl_lighthouse_samples& S) {
     std::set<uint8_t> unique_ids;
 
     for (auto s : S)
@@ -115,7 +115,7 @@ lighthouse_sync_pulse lookup_pulse_class(uint16_t pulselen) {
 //
 // Reference: https://github.com/nairol/LighthouseRedox/blob/master/docs/Light//20Emissions.md
 
-std::tuple<int,int,int> decode_pulse(vl_lighthouse_samples S) {
+std::tuple<int,int,int> decode_pulse(const vl_lighthouse_samples& S) {
     unsigned ndups = S.size() - unique_sensor_ids(S);
 
     // not fatal
@@ -205,7 +205,7 @@ void subset(S, elms) {
 // the time delta directly proportional to the angle.
 
 
-uint32_t ticks_sample_to_angle(vive_headset_lighthouse_pulse2 sample, uint32_t epoch) {
+uint32_t ticks_sample_to_angle(const vive_headset_lighthouse_pulse2& sample, uint32_t epoch) {
     uint32_t angle_ticks = sample.timestamp + sample.length / 2 - epoch;
     return angle_ticks;
 }
@@ -230,7 +230,7 @@ double ticks_to_mm(ticks, dist) {
 }
 */
 
-vl_light_sample_group process_pulse_set(vl_lighthouse_samples S, int64_t last_pulse) {
+vl_light_sample_group process_pulse_set(const vl_lighthouse_samples& S, int64_t last_pulse) {
 
     int skip;
     int sweepi;
@@ -302,7 +302,7 @@ vl_light_sample_group process_pulse_set(vl_lighthouse_samples S, int64_t last_pu
 //			- samples: the subset of D with the samples indicating this pulse
 
 std::tuple<int, vl_light_sample_group, int, vl_light_sample_group> update_pulse_state(
-        vl_lighthouse_samples pulse_samples,
+        const vl_lighthouse_samples& pulse_samples,
         int64_t last_pulse,
         vl_light_sample_group current_sweep,
         int seq) {
@@ -354,7 +354,7 @@ struct vl_angles {
 };
 
 
-int find_max_seq(std::vector<vl_light_sample_group> sweeps) {
+int find_max_seq(const std::vector<vl_light_sample_group>& sweeps) {
     std::vector<int> seqs;
     for (auto g : sweeps) {
         seqs.push_back(g.seq);
@@ -363,7 +363,7 @@ int find_max_seq(std::vector<vl_light_sample_group> sweeps) {
 }
 
 std::vector<vl_light_sample_group> filter_sweeps(
-        std::vector<vl_light_sample_group> sweeps, char ch, int seq, char rotor) {
+        const std::vector<vl_light_sample_group>& sweeps, char ch, int seq, char rotor) {
     std::vector<vl_light_sample_group> filtered;
     for (auto g : sweeps)
         if (g.channel == ch && g.seq == seq && g.sweep == rotor)
@@ -379,7 +379,7 @@ int find_max_sendor_id(vl_lighthouse_samples samples) {
     return *std::max_element(sensor_ids.begin(), sensor_ids.end());
 }
 
-vl_lighthouse_samples filter_samples_by_sensor_id(vl_lighthouse_samples samples, int sensor_id) {
+vl_lighthouse_samples filter_samples_by_sensor_id(const vl_lighthouse_samples& samples, int sensor_id) {
     vl_lighthouse_samples filtered;
     for(auto s : samples)
         if (s.sensor_id == sensor_id)
@@ -387,7 +387,7 @@ vl_lighthouse_samples filter_samples_by_sensor_id(vl_lighthouse_samples samples,
     return filtered;
 }
 
-std::map<int, vl_angles> collect_readings(char station, std::vector<vl_light_sample_group> sweeps) {
+std::map<int, vl_angles> collect_readings(char station, const std::vector<vl_light_sample_group>& sweeps) {
     // Collect all readings into a nice data structure
     // x and y angles, and a timestamp (x sweep epoch)
     // array R(sensor_id + 1).x, .y, .t
@@ -447,7 +447,7 @@ std::map<int, vl_angles> collect_readings(char station, std::vector<vl_light_sam
 }
 
 
-vl_lighthouse_samples filter_reports (vl_lighthouse_samples reports, sample_filter filter_fun) {
+vl_lighthouse_samples filter_reports (const vl_lighthouse_samples& reports, const sample_filter& filter_fun) {
     vl_lighthouse_samples results;
     for (auto sample : reports)
         if (filter_fun(sample))
@@ -472,7 +472,7 @@ lighthouse_reports sanitize(const lighthouse_reports& S) {
 }
 */
 
-bool is_sample_valid(vive_headset_lighthouse_pulse2 s) {
+bool is_sample_valid(const vive_headset_lighthouse_pulse2& s) {
     return !(s.timestamp == 0xffffffff && s.sensor_id == 0xff && s.length == 0xffff);
 }
 
@@ -508,11 +508,11 @@ vl_lighthouse_samples subset(vl_lighthouse_samples D, std::vector<int> indices) 
     return results;
 }
 
-bool isempty(vl_light_sample_group samples) {
+bool isempty(const vl_light_sample_group& samples) {
     return samples.samples.empty();
 }
 
-std::tuple<std::vector<vl_light_sample_group>, std::vector<vl_light_sample_group>> process_lighthouse_samples(vl_lighthouse_samples D) {
+std::tuple<std::vector<vl_light_sample_group>, std::vector<vl_light_sample_group>> process_lighthouse_samples(const vl_lighthouse_samples& D) {
 
     // state for the processing loop
     std::vector<int> pulse_inds;
@@ -614,7 +614,7 @@ std::tuple<std::vector<vl_light_sample_group>, std::vector<vl_light_sample_group
     return {sweeps, pulses};
 }
 
-void print_readings(std::map<int, vl_angles> readings) {
+void print_readings(const std::map<int, vl_angles>& readings) {
     for (auto angles : readings) {
         for (unsigned i = 0; i < angles.second.x.size(); i++ ) {
             printf("sensor %u, x %u, y %u, t %u\n",
@@ -626,7 +626,7 @@ void print_readings(std::map<int, vl_angles> readings) {
     }
 }
 
-void write_readings_to_csv(std::map<int, vl_angles> readings, std::string file_name) {
+void write_readings_to_csv(const std::map<int, vl_angles>& readings, const std::string& file_name) {
     std::ofstream csv_file;
     csv_file.open (file_name);
 
