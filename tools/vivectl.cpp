@@ -72,11 +72,16 @@ static void dump_station_angle() {
     vl_light_classify_samples(raw_light_samples);
 }
 
-static vl_lighthouse_samples parse_csv_file(std::string csv_file) {
+static vl_lighthouse_samples parse_csv_file(const std::string& file_path) {
 
     vl_lighthouse_samples samples;
     std::string line;
-    std::ifstream csv_stream(csv_file);
+    std::ifstream csv_stream(file_path);
+
+    if (!csv_stream.good()) {
+        printf("CSV file not found: %s\n", file_path.c_str());
+        return samples;
+    }
 
     while(std::getline(csv_stream, line)) {
         std::istringstream s(line);
@@ -100,13 +105,17 @@ static vl_lighthouse_samples parse_csv_file(std::string csv_file) {
         //printf("int ts %u id %u length %u\n", sample.timestamp, sample.sensor_id, sample.length);
     }
 
+    if (samples.empty())
+        printf("No samples found in %s\n", file_path.c_str());
+
     return samples;
 
 }
 
-static void dump_station_angle_from_csv() {
-    vl_lighthouse_samples samples = parse_csv_file("/home/bmonkey/workspace/vr/vive-libre-analysis-and-data/dumps/hmd-light-csv/b_c_still.csv");
-    vl_light_classify_samples(&samples);
+static void dump_station_angle_from_csv(const std::string& file_path) {
+    vl_lighthouse_samples samples = parse_csv_file(file_path);
+    if (!samples.empty())
+        vl_light_classify_samples(&samples);
 }
 
 static void send_hmd_off() {
@@ -160,7 +169,7 @@ static std::map<std::string, taskfun> send_commands {
     { "controller-off", send_controller_off }
 };
 
-static std::string commands_to_str(std::map<std::string, taskfun> commands) {
+static std::string commands_to_str(const std::map<std::string, taskfun>& commands) {
     std::string str;
     for (const auto& cm : commands)
         str += "  " + cm.first + "\n";
@@ -209,7 +218,12 @@ int main(int argc, char *argv[]) {
         } else if (compare(argv[1], "send")) {
             task = _get_task_fun(argv, send_commands);
         } else if (compare(argv[1], "classify")) {
-            task = &dump_station_angle_from_csv;
+
+            std::string file_name = argv[2];
+            task = [file_name]() {
+                dump_station_angle_from_csv(file_name);
+            };
+
         } else {
             argument_error(argv[1]);
             return 0;
