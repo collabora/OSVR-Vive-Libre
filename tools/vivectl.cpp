@@ -146,6 +146,8 @@ static void signal_interrupt_handler(int sig) {
 typedef std::function<void(void)> taskfun;
 
 void run(taskfun task) {
+    if (!task)
+        return;
     driver = new vl_driver();
     if (!driver->init_devices(0))
         return;
@@ -215,23 +217,18 @@ int main(int argc, char *argv[]) {
     } else {
         if (compare(argv[1], "dump")) {
             task = _get_task_fun(argv, dump_commands);
+            run(task);
         } else if (compare(argv[1], "send")) {
             task = _get_task_fun(argv, send_commands);
+            run(task);
         } else if (compare(argv[1], "classify")) {
-
             std::string file_name = argv[2];
-            task = [file_name]() {
-                dump_station_angle_from_csv(file_name);
-            };
-
+            dump_station_angle_from_csv(file_name);
         } else {
             argument_error(argv[1]);
             return 0;
         }
     }
-
-    if (task)
-        run(task);
 
     return 0;
 }

@@ -21,14 +21,14 @@ typedef std::function<bool(const vive_headset_lighthouse_pulse2&)> sample_filter
 struct vl_light_sample_group {
     char channel;
     char sweep; // rotor
-    uint32_t epoch;
+    double epoch;
     int skip;
     int seq;
     vl_lighthouse_samples samples;
 };
 
-uint32_t median_timestamp(const vl_lighthouse_samples& samples) {
-    std::vector<uint32_t> timestamps;
+double median_timestamp(const vl_lighthouse_samples& samples) {
+    std::vector<double> timestamps;
 
     for (auto s : samples)
         timestamps.push_back(s.timestamp);
@@ -36,13 +36,13 @@ uint32_t median_timestamp(const vl_lighthouse_samples& samples) {
     size_t size = timestamps.size();
     std::sort(timestamps.begin(), timestamps.end());
     if (size  % 2 == 0)
-          return (timestamps[size / 2 - 1] + timestamps[size / 2]) / 2;
+          return (timestamps.at(size / 2 - 1) + timestamps.at(size / 2)) / 2;
       else
-          return timestamps[size / 2];
+          return timestamps.at(size / 2);
 }
 
-uint16_t median_length(const vl_lighthouse_samples& samples) {
-    std::vector<uint16_t> lengths;
+int64_t median_length(const vl_lighthouse_samples& samples) {
+    std::vector<int64_t> lengths;
 
     for (auto s : samples)
         lengths.push_back(s.length);
@@ -56,7 +56,7 @@ uint16_t median_length(const vl_lighthouse_samples& samples) {
 }
 
 void print_sample_group (const vl_light_sample_group& g) {
-    printf("channel %c (len %d, samples %zu): skip %d, sweep %c epoch %u\n",
+    printf("channel %c (len %ld, samples %zu): skip %d, sweep %c epoch %f\n",
         g.channel, median_length(g.samples), g.samples.size(), g.skip, g.sweep, g.epoch);
 }
 
@@ -146,7 +146,7 @@ std::tuple<int,int,int> decode_pulse(const vl_lighthouse_samples& S) {
 // This function requires the globals 'tick_rate' and 'rotor_rps'
 // to be set.
 
-char channel_detect(uint32_t last_pulse_time, int64_t new_pulse_time) {
+char channel_detect(uint32_t last_pulse_time, double new_pulse_time) {
     // Two sweeps per rotation
     int64_t period = VL_TICK_RATE / VL_ROTOR_RPS / 2;
     // ??
@@ -248,7 +248,7 @@ vl_light_sample_group process_pulse_set(const vl_lighthouse_samples& S, int64_t 
     // Their stopping time looks to me much better in sync, but
     // let's try simply the starting time concensus.
 
-    uint32_t t = median_timestamp(S);
+    double t = median_timestamp(S);
 
     char ch = channel_detect(last_pulse, t);
 
@@ -256,7 +256,7 @@ vl_light_sample_group process_pulse_set(const vl_lighthouse_samples& S, int64_t 
     char sweep = key[sweepi + 1];
 
     if (S.size() < 5)
-        printf("Warning: channel %c pulse at %d (len %d, samples %zu): skip %d, sweep %c, data %d\n",
+        printf("Warning: channel %c pulse at %.1f (len %ld, samples %zu): skip %d, sweep %c, data %d\n",
             ch, t, median_length(S), S.size(), skip, sweep, databit);
 
     // no use for databit here
@@ -301,22 +301,22 @@ vl_light_sample_group process_pulse_set(const vl_lighthouse_samples& S, int64_t 
 //			- epoch: the base timestamp indicating the zero raw angle
 //			- samples: the subset of D with the samples indicating this pulse
 
-std::tuple<int, vl_light_sample_group, int, vl_light_sample_group> update_pulse_state(
+std::tuple<double, vl_light_sample_group, int, vl_light_sample_group> update_pulse_state(
         const vl_lighthouse_samples& pulse_samples,
-        int64_t last_pulse,
+        double last_pulse_epoch,
         vl_light_sample_group current_sweep,
         int seq) {
 
     vl_light_sample_group out_pulse;
-    vl_light_sample_group pulse = process_pulse_set(pulse_samples, last_pulse);
-    last_pulse = pulse.epoch;
+    vl_light_sample_group pulse = process_pulse_set(pulse_samples, last_pulse_epoch);
+    last_pulse_epoch = pulse.epoch;
 
     if (pulse.channel == 'e' || pulse_samples.size() < 5) {
         // Invalid pulse, reset state since cannot know which
         // sweep following sweep samples would belong in.
         current_sweep = vl_light_sample_group();
-        printf("warning: returning incomplete pulse\n");
-        return {last_pulse, current_sweep, seq, out_pulse};
+        // printf("Warning: returning incomplete pulse\n");
+        return {last_pulse_epoch, current_sweep, seq, out_pulse};
     }
 
     if (pulse.skip == 0) {
@@ -343,7 +343,7 @@ std::tuple<int, vl_light_sample_group, int, vl_light_sample_group> update_pulse_
         };
     }
 
-    return {last_pulse, current_sweep, seq, out_pulse};
+    return {last_pulse_epoch, current_sweep, seq, out_pulse};
 }
 
 
@@ -518,7 +518,7 @@ std::tuple<std::vector<vl_light_sample_group>, std::vector<vl_light_sample_group
     std::vector<int> pulse_inds;
     std::vector<int> sweep_inds;
 
-    int64_t last_pulse = -1e6;
+    double last_pulse_epoch = -1e6;
     int seq = 0;
 
     vl_light_sample_group current_sweep;
@@ -538,7 +538,7 @@ std::tuple<std::vector<vl_light_sample_group>, std::vector<vl_light_sample_group
             if (!pulse_inds.empty()) {
                 // process the pulse set
                 vl_light_sample_group pulse;
-                std::tie(last_pulse, current_sweep, seq, pulse) = update_pulse_state(subset(D, pulse_inds), last_pulse, current_sweep, seq);
+                std::tie(last_pulse_epoch, current_sweep, seq, pulse) = update_pulse_state(subset(D, pulse_inds), last_pulse_epoch, current_sweep, seq);
 
                 pulse_inds.clear();
                 pulse_range = {UINT32_MAX, 0};
@@ -546,12 +546,12 @@ std::tuple<std::vector<vl_light_sample_group>, std::vector<vl_light_sample_group
                     //printf("pushing pulse 1\n");
                     pulses.push_back(pulse);
                 } else {
-                    printf("error: sweep has begun but pulse is empty.\n");
+                    //printf("error: sweep has begun but pulse is empty.\n");
                 }
             }
 
             if (isempty(current_sweep)) {
-                printf("warning: current_sweep is empty.\n");
+                // printf("warning: current_sweep is empty.\n");
                 // do not know which sweep, so skip
                 continue;
             }
@@ -601,7 +601,7 @@ std::tuple<std::vector<vl_light_sample_group>, std::vector<vl_light_sample_group
 
                 // process the pulse set
                 vl_light_sample_group pulse;
-                std::tie(last_pulse, current_sweep, seq, pulse) = update_pulse_state(subset(D, pulse_inds), last_pulse, current_sweep, seq);
+                std::tie(last_pulse_epoch, current_sweep, seq, pulse) = update_pulse_state(subset(D, pulse_inds), last_pulse_epoch, current_sweep, seq);
 
                 pulse_inds.clear();
                 pulse_range = {UINT_MAX, 0};
@@ -641,6 +641,118 @@ void write_readings_to_csv(const std::map<int, vl_angles>& readings, const std::
     csv_file.close();
 }
 
+
+#define SAMPLES_STRING "\
+        .samples = struct [1 1]:\n\
+            [1  1] =\n\
+                .timestamp = %s\n\
+                .sensor_id = %s\n\
+                .length = %s\n"
+
+#define PULSE_STRING "\
+    [1  %u] =\n\
+%s\
+        .epoch = %s\n\
+        .channel = %c\n\
+        .sweep = %c\n\
+        .seq = %u\n"
+
+#define SWEEP_STRING "\
+    [1  %u] =\n\
+        .channel = %c\n\
+        .rotor = %c\n\
+        .seq = %u\n\
+        .epoch = %s\n\
+%s"
+
+
+std::string epoch_to_string(double epoch) {
+        std::string epoch_string;
+
+        char* buffer = new char[50];
+        double intpart;
+
+        if( modf (epoch , &intpart) == 0 )
+            sprintf (buffer, "%.0f", epoch);
+        else
+            sprintf (buffer, "%.1f", epoch);
+
+        std::string out(buffer);
+        delete (buffer);
+
+        return out;
+}
+
+std::string light_house_samples_to_string(const vl_lighthouse_samples& samples) {
+        std::stringstream timestamps;
+        std::stringstream sensor_ids;
+        std::stringstream lengths;
+
+        for (unsigned i = 0; i < samples.size(); i++) {
+
+            vive_headset_lighthouse_pulse2 sample = samples[i];
+
+            timestamps << sample.timestamp;
+            if (i != samples.size() - 1)
+                timestamps << "  ";
+
+            if (sample.sensor_id < 10 && i != 0)
+                sensor_ids << " ";
+
+            sensor_ids << (unsigned int)(sample.sensor_id);
+            if (i != samples.size() - 1)
+                sensor_ids << "  ";
+
+            if (sample.length < 100 && i != 0)
+                lengths << " ";
+
+            lengths << sample.length;
+            if (i != samples.size() - 1)
+                lengths << "  ";
+        }
+
+        char* buffer = new char[1000];
+        sprintf (buffer, SAMPLES_STRING, timestamps.str().c_str(), sensor_ids.str().c_str(), lengths.str().c_str());
+
+        std::string out(buffer);
+
+        delete (buffer);
+
+        return out;
+
+}
+
+
+void print_pulse(char* buffer, const vl_light_sample_group& g, const std::string& samples, unsigned i) {
+    sprintf (buffer, PULSE_STRING, i+1, samples.c_str(), epoch_to_string(g.epoch).c_str(), g.channel, g.sweep, g.seq);
+}
+
+void print_sweep(char* buffer, const vl_light_sample_group& g, const std::string& samples, unsigned i) {
+    sprintf (buffer, SWEEP_STRING, i+1, g.channel, g.sweep, g.seq, epoch_to_string(g.epoch).c_str(), samples.c_str());
+}
+
+typedef std::function<void(char*, const vl_light_sample_group&, const std::string&, unsigned)> print_fun;
+
+
+void write_light_groups_to_file(const std::string& title,
+                                const std::string& file_name,
+                                const std::vector<vl_light_sample_group>& pulses,
+                                const print_fun& fun) {
+    std::ofstream fid;
+    printf("Writing %s.\n", file_name.c_str());
+    fid.open (file_name);
+    fid << title << " struct [1 " << pulses.size() << "]:\n";
+    for (unsigned i = 0; i < pulses.size(); i++) {
+        vl_light_sample_group g = pulses.at(i);
+        std::string samples = light_house_samples_to_string(g.samples);
+        char* buffer = new char[1000];
+        fun(buffer, g, samples, i);
+        fid << buffer;
+        delete(buffer);
+    }
+    fid.close();
+}
+
 void vl_light_classify_samples(vl_lighthouse_samples *raw_light_samples) {
 
     // Take just a little bit for analysis
@@ -650,30 +762,17 @@ void vl_light_classify_samples(vl_lighthouse_samples *raw_light_samples) {
     printf("raw: %ld\n", raw_light_samples->size());
     printf("valid: %ld\n", sanitized_light_samples.size());
 
-    /*
-      // remove timestamp offset
-      min_t = min(D.timestamp);
-      D.timestamp = D.timestamp - min_t;
-    */
-
-    std::vector<vl_light_sample_group> sweeps;
     std::vector<vl_light_sample_group> pulses;
+    std::vector<vl_light_sample_group> sweeps;
     std::tie(sweeps, pulses) = process_lighthouse_samples(sanitized_light_samples);
 
-    printf("found %zu pulses\n", pulses.size());
-    /*
-    for (auto p : pulses) {
-        print_sample_group(p);
-    }
-    */
+    printf("Found %zu pulses\n", pulses.size());
+    write_light_groups_to_file("Pulses", "b_c_still.pulses.cpp.txt", pulses, print_pulse);
 
-    printf("found %zu sweeps\n", sweeps.size());
-    /*
-    for (auto p : sweeps) {
-        print_sample_group(p);
-    }
-    */
+    printf("Found %zu sweeps\n", sweeps.size());
+    write_light_groups_to_file("Sweeps", "b_c_still.sweeps.cpp.txt", sweeps, print_sweep);
 
+    /*
     std::map<int, vl_angles> R_B = collect_readings('B', sweeps);
     std::map<int, vl_angles> R_C = collect_readings('C', sweeps);
 
@@ -687,4 +786,5 @@ void vl_light_classify_samples(vl_lighthouse_samples *raw_light_samples) {
         write_readings_to_csv(R_B, "b_angles.csv");
     if (R_C.size() > 0)
         write_readings_to_csv(R_C, "c_angles.csv");
+    */
 }
