@@ -387,12 +387,12 @@ vl_lighthouse_samples filter_samples_by_sensor_id(const vl_lighthouse_samples& s
     return filtered;
 }
 
-std::map<int, vl_angles> collect_readings(char station, const std::vector<vl_light_sample_group>& sweeps) {
+std::map<unsigned, vl_angles> collect_readings(char station, const std::vector<vl_light_sample_group>& sweeps) {
     // Collect all readings into a nice data structure
     // x and y angles, and a timestamp (x sweep epoch)
     // array R(sensor_id + 1).x, .y, .t
 
-    std::map<int, vl_angles> R;
+    std::map<unsigned, vl_angles> R;
 
     int maxseq = find_max_seq(sweeps);
 
@@ -400,47 +400,53 @@ std::map<int, vl_angles> collect_readings(char station, const std::vector<vl_lig
     for (int i = 1; i < maxseq; i++) {
         // choose station and sequence
 
-        std::vector<vl_light_sample_group> x_ind = filter_sweeps(sweeps, station, i, 'H');
-        std::vector<vl_light_sample_group> y_ind = filter_sweeps(sweeps, station, i, 'V');
+        std::vector<vl_light_sample_group> x_sweeps = filter_sweeps(sweeps, station, i, 'H');
+        std::vector<vl_light_sample_group> y_sweeps = filter_sweeps(sweeps, station, i, 'V');
 
-        if (x_ind.size() < 1 || y_ind.size() < 1) {
+        if (x_sweeps.size() < 1 || y_sweeps.size() < 1) {
             // Either or both sweeps are empty, ignore.
             printf("Warning: Either or both sweeps are empty, ignore.\n");
             break;
         }
 
-        if (x_ind.size() != 1 || y_ind.size() != 1)
-            printf("error: Unexpected number of indices [%zu %zu], should be just one each\n", x_ind.size(), y_ind.size());
+        if (x_sweeps.size() != 1 || y_sweeps.size() != 1)
+            printf("error: Unexpected number of indices [%zu %zu], should be just one each\n", x_sweeps.size(), y_sweeps.size());
 
-        vl_light_sample_group x_sweep = x_ind[0];
-        vl_light_sample_group y_sweep = y_ind[0];
 
-        int max_sensor_id = find_max_sendor_id(x_sweep.samples);
+        for (unsigned sweep_i = 0; sweep_i < x_sweeps.size(); sweep_i++) {
 
-        // loop over sensors ids, only interested in both x and y
-        for (int s = 0; s < max_sensor_id; s++) {
-            vl_lighthouse_samples xi = filter_samples_by_sensor_id(x_sweep.samples, s);
-            vl_lighthouse_samples yi = filter_samples_by_sensor_id(y_sweep.samples, s);
+            vl_light_sample_group x_sweep = x_sweeps[sweep_i];
+            vl_light_sample_group y_sweep = y_sweeps[sweep_i];
 
-            if (xi.size() > 1 || yi.size() > 1)
-                printf("error: Same sensor sampled multiple times??\n");
+            //int max_sensor_id = find_max_sendor_id(x_sweep.samples);
 
-            if (xi.size() < 1 || yi.size() < 1)
-                continue;
+            // loop over sensors ids, only interested in both x and y
+            for (unsigned s = 0; s < 32; s++) {
+                vl_lighthouse_samples xi = filter_samples_by_sensor_id(x_sweep.samples, s);
+                vl_lighthouse_samples yi = filter_samples_by_sensor_id(y_sweep.samples, s);
 
-            vl_angles angles;
+                if (xi.size() > 1 || yi.size() > 1)
+                    printf("error: Same sensor sampled multiple times??\n");
 
-            double x_ang = ticks_sample_to_angle(xi[0], x_sweep.epoch);
-            double y_ang = ticks_sample_to_angle(yi[0], y_sweep.epoch);
+                if (xi.size() < 1 || yi.size() < 1)
+                    continue;
 
-            angles.x.push_back(x_ang);
-            angles.y.push_back(y_ang);
+                if (!R.count( s ))
+                    R.insert(std::pair<unsigned, vl_angles>(s, vl_angles()));
 
-            // Assumes all measurements happened at the same time,
-            // which is wrong.
-            angles.t.push_back(x_sweep.epoch);
 
-            R.insert(std::pair<int, vl_angles>(s, angles));
+                double x_ang = ticks_sample_to_angle(xi[0], x_sweep.epoch);
+                double y_ang = ticks_sample_to_angle(yi[0], y_sweep.epoch);
+
+                R[s].x.push_back(x_ang);
+                R[s].y.push_back(y_ang);
+
+                // Assumes all measurements happened at the same time,
+                // which is wrong.
+                R[s].t.push_back(x_sweep.epoch);
+
+
+            }
         }
     }
     return R;
@@ -614,7 +620,7 @@ std::tuple<std::vector<vl_light_sample_group>, std::vector<vl_light_sample_group
     return {sweeps, pulses};
 }
 
-void print_readings(const std::map<int, vl_angles>& readings) {
+void print_readings(const std::map<unsigned, vl_angles>& readings) {
     for (auto angles : readings) {
         for (unsigned i = 0; i < angles.second.x.size(); i++ ) {
             printf("sensor %u, x %u, y %u, t %u\n",
@@ -626,7 +632,7 @@ void print_readings(const std::map<int, vl_angles>& readings) {
     }
 }
 
-void write_readings_to_csv(const std::map<int, vl_angles>& readings, const std::string& file_name) {
+void write_readings_to_csv(const std::map<unsigned, vl_angles>& readings, const std::string& file_name) {
     std::ofstream csv_file;
     csv_file.open (file_name);
 
@@ -772,19 +778,17 @@ void vl_light_classify_samples(vl_lighthouse_samples *raw_light_samples) {
     printf("Found %zu sweeps\n", sweeps.size());
     write_light_groups_to_file("Sweeps", "b_c_still.sweeps.cpp.txt", sweeps, print_sweep);
 
-    /*
-    std::map<int, vl_angles> R_B = collect_readings('B', sweeps);
-    std::map<int, vl_angles> R_C = collect_readings('C', sweeps);
+    std::map<unsigned, vl_angles> R_B = collect_readings('B', sweeps);
+    std::map<unsigned, vl_angles> R_C = collect_readings('C', sweeps);
 
     printf("Found %zu sensors with B angles\n", R_B.size());
-    print_readings(R_B);
+    // print_readings(R_B);
 
     printf("Found %zu sensors with C angles\n", R_C.size());
-    print_readings(R_C);
+    // print_readings(R_C);
 
     if (R_B.size() > 0)
         write_readings_to_csv(R_B, "b_angles.csv");
     if (R_C.size() > 0)
         write_readings_to_csv(R_C, "c_angles.csv");
-    */
 }
