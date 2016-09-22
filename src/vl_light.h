@@ -415,8 +415,15 @@ std::map<unsigned, vl_angles> collect_readings(char station, const std::vector<v
 
         for (unsigned sweep_i = 0; sweep_i < x_sweeps.size(); sweep_i++) {
 
-            vl_light_sample_group x_sweep = x_sweeps[sweep_i];
-            vl_light_sample_group y_sweep = y_sweeps[sweep_i];
+            vl_light_sample_group x_sweep, y_sweep;
+
+            try {
+                x_sweep = x_sweeps.at(sweep_i);
+                y_sweep = y_sweeps.at(sweep_i);
+            } catch (std::out_of_range e) {
+                printf("Warning: one dimension is missing for sweep %u\n", sweep_i);
+                continue;
+            }
 
             //int max_sensor_id = find_max_sendor_id(x_sweep.samples);
 
