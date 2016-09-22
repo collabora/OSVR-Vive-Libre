@@ -17,12 +17,12 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(osvr REQUIRED)
-find_package(JsonCpp REQUIRED)
-find_package(Boost REQUIRED COMPONENTS system iostreams filesystem)
 find_package(Eigen3 REQUIRED)
+find_package(OpenCV REQUIRED)
 
 PKG_CHECK_MODULES (HIDAPI REQUIRED hidapi-libusb)
 PKG_CHECK_MODULES (ZLIB REQUIRED zlib)
+PKG_CHECK_MODULES (JSONCPP REQUIRED jsoncpp)
 
 function(add_cxxflag FLAG)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FLAG}" PARENT_SCOPE)
@@ -35,6 +35,9 @@ add_cxxflag("-Wlogical-op -Wredundant-decls")
 #add_cxxflag("-Wmissing-declarations")
 
 include_directories(${EIGEN3_INCLUDE_DIR} ${HIDAPI_INCLUDE_DIRS} src)
+
+
+message("found JsonCpp_LIBRARIES libs: ${JSONCPP_LIBRARIES}")
 
 # Build the plugin
 osvr_convert_json(org_osvr_Vive_Libre_json
@@ -57,7 +60,9 @@ set(SOURCES
 add_library(vive-libre SHARED ${SOURCES})
 target_link_libraries(vive-libre
     ${HIDAPI_LIBRARIES}
-    ${ZLIB_LIBRARIES})
+    ${ZLIB_LIBRARIES}
+    ${JSONCPP_LIBRARIES}
+    ${OpenCV_LIBRARIES})
 
 set(OSVR_PLUGIN_SOURCES
     src/org_osvr_Vive_Libre.cpp

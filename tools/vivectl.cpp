@@ -118,6 +118,68 @@ static void dump_station_angle_from_csv(const std::string& file_path) {
         vl_light_classify_samples(&samples);
 }
 
+
+#include <json/value.h>
+#include <json/reader.h>
+
+static void pnp_from_csv(const std::string& file_path) {
+
+    std::string config(vl_get_config(driver->hmd_imu_device));
+
+    //printf("\n\nconfig:\n\n%s\n\n", config.c_str());
+
+    std::stringstream foo;
+    foo << config;
+
+    Json::Value root;
+    Json::CharReaderBuilder rbuilder;
+    // Configure the Builder, then ...
+    std::string errs;
+    bool parsingSuccessful = Json::parseFromStream(rbuilder, foo, &root, &errs);
+    if (!parsingSuccessful) {
+        // report to the user the failure and their locations in the document.
+        std::cout  << "Failed to parse configuration\n"
+                   << errs;
+        return;
+    }
+
+    std::string my_encoding = root.get("mb_serial_number", "UTF-32" ).asString();
+    printf("mb_serial_number: %s\n", my_encoding.c_str());
+
+
+    Json::Value modelPoints = root["lighthouse_config"]["modelPoints"];
+
+    printf("model points size: %u\n", modelPoints.size());
+
+    unsigned sensor_id = 0;
+
+
+    std::map<unsigned, cv::Point3f> config_sensor_positions;
+
+    for ( unsigned index = 0; index < modelPoints.size(); ++index ) {
+        // Iterates over the sequence elements.
+
+       Json::Value point = modelPoints[index];
+
+       printf("%d: x %s y %s z %s\n", sensor_id, point[0].asString().c_str(), point[1].asString().c_str(), point[2].asString().c_str());
+
+       cv::Point3f p = cv::Point3f(
+               std::stod(point[0].asString()),
+               std::stod(point[1].asString()),
+               std::stod(point[2].asString()));
+
+       config_sensor_positions.insert(std::pair<unsigned, cv::Point3f>(sensor_id, p));
+
+       sensor_id++;
+    }
+
+
+
+    vl_lighthouse_samples samples = parse_csv_file(file_path);
+    if (!samples.empty())
+        try_pnp(&samples, config_sensor_positions);
+}
+
 static void send_hmd_off() {
     // turn the display off
     int hret = hid_send_feature_report(driver->hmd_device,
@@ -224,6 +286,12 @@ int main(int argc, char *argv[]) {
         } else if (compare(argv[1], "classify")) {
             std::string file_name = argv[2];
             dump_station_angle_from_csv(file_name);
+        } else if (compare(argv[1], "pnp")) {
+            std::string file_name = argv[2];
+            task = [file_name]() {
+                pnp_from_csv(file_name);
+            };
+            run(task);
         } else {
             argument_error(argv[1]);
             return 0;

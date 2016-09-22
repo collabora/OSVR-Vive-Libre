@@ -766,6 +766,10 @@ void write_light_groups_to_file(const std::string& title,
     fid.close();
 }
 
+#include "opencv2/core.hpp"
+#include <opencv2/core/utility.hpp>
+#include <opencv2/calib3d.hpp>
+
 void vl_light_classify_samples(vl_lighthouse_samples *raw_light_samples) {
 
     // Take just a little bit for analysis
@@ -798,4 +802,46 @@ void vl_light_classify_samples(vl_lighthouse_samples *raw_light_samples) {
         write_readings_to_csv(R_B, "b_angles.csv");
     if (R_C.size() > 0)
         write_readings_to_csv(R_C, "c_angles.csv");
+}
+
+#include <iostream>
+
+void try_pnp(vl_lighthouse_samples *raw_light_samples, const std::map<unsigned, cv::Point3f>& config_sensor_positions) {
+    vl_lighthouse_samples sanitized_light_samples = filter_reports(*raw_light_samples, &is_sample_valid);
+    std::vector<vl_light_sample_group> pulses;
+    std::vector<vl_light_sample_group> sweeps;
+    std::tie(sweeps, pulses) = process_lighthouse_samples(sanitized_light_samples);
+    std::map<unsigned, vl_angles> R_B = collect_readings('B', sweeps);
+    std::map<unsigned, vl_angles> R_C = collect_readings('C', sweeps);
+
+    cv::Mat rvec, tvec;
+
+    //bool useExtrinsicGuess=false;
+    //int flags=ITERATIVE;
+
+
+    std::vector<cv::Point3f> configSensors;
+    std::vector<cv::Point2f> foundSensors;
+
+    cv::Mat cameraMatrix = cv::Mat::eye(3, 3, CV_64F);
+    //cv::Mat distCoeffs = cv::Mat::zeros(3, 3, CV_64F);
+    cv::Mat distCoeffs;
+
+    for (auto angles : R_B) {
+
+       // for (unsigned i = 0; i < angles.second.x.size(); i++ )
+            foundSensors.push_back(cv::Point2f(angles.second.x[0], angles.second.y[0]));
+            configSensors.push_back(config_sensor_positions.at(angles.first));
+    }
+
+    bool ret = solvePnP(cv::Mat(configSensors), cv::Mat(foundSensors), cameraMatrix,
+             distCoeffs, rvec, tvec);
+
+
+    //bool ret = solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec, useExtrinsicGuess, flags);
+
+    printf("solvePnP: %d\n", ret);
+
+    std::cout << "rvec = \n "  << rvec << "\n\n";
+    std::cout << "tvec = \n "  << tvec << "\n\n";
 }
