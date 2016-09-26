@@ -13,7 +13,7 @@
 #include <stdlib.h>
 
 #include "vl_config.h"
-#include "hidraw.h"
+#include "vl_hidraw.h"
 
 /*
  * Downloads configuration data stored in the Vive headset and controller.

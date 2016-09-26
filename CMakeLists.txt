@@ -45,7 +45,8 @@ osvr_convert_json(org_osvr_Vive_Libre_json
     "${CMAKE_CURRENT_SOURCE_DIR}/org_osvr_Vive_Libre_json.h")
 
 set(SOURCES
-    src/hidraw.h
+    src/vl_hidraw.h
+    src/vl_hid_reports.h
     src/vl_driver.cpp
     src/vl_driver.h
     src/vl_fusion.cpp

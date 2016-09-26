@@ -27,7 +27,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "hid-reports.h"
+#include "vl_hid_reports.h"
 
 typedef enum
 {
