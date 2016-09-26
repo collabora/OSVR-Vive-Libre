@@ -2,7 +2,7 @@
   "deviceVendor": "Vive Libre",
   "deviceName": "HTC Vive",
   "author": "Lubosz Sarnecki lubosz.sarnecki@collabora.co.uk",
-  "version": 1,
+  "version": 0.2,
   "lastModified": "",
   "interfaces": {
     "tracker": {
