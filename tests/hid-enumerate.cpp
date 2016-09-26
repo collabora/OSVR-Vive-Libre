@@ -12,7 +12,7 @@ int main()
     int res;
     #define MAX_STR 255
     wchar_t wstr[MAX_STR];
-    hid_device *handle;
+    hid_device *handle = nullptr;
  
     struct hid_device_info *devs, *cur_dev;
 

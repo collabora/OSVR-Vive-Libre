@@ -307,7 +307,7 @@ std::tuple<double, vl_light_sample_group, int, vl_light_sample_group> update_pul
         vl_light_sample_group current_sweep,
         int seq) {
 
-    vl_light_sample_group out_pulse;
+    vl_light_sample_group out_pulse = vl_light_sample_group();
     vl_light_sample_group pulse = process_pulse_set(pulse_samples, last_pulse_epoch);
     last_pulse_epoch = pulse.epoch;
 
@@ -534,7 +534,7 @@ std::tuple<std::vector<vl_light_sample_group>, std::vector<vl_light_sample_group
     double last_pulse_epoch = -1e6;
     int seq = 0;
 
-    vl_light_sample_group current_sweep;
+    vl_light_sample_group current_sweep = vl_light_sample_group();
     //pulse_range = [Inf -Inf]; // begin, end timestamp
     std::pair<uint32_t, uint32_t> pulse_range = {UINT32_MAX, 0};
 

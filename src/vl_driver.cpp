@@ -223,7 +223,7 @@ static Eigen::Vector3d vec3_from_gyro(const __s16* smp)
 
 void _log_watchman(unsigned char *buffer, int size) {
     if (buffer[0] == VL_MSG_WATCHMAN) {
-        vive_controller_report1 pkt;
+        vive_controller_report1 pkt = vive_controller_report1();
         vl_msg_decode_watchman(&pkt, buffer, size);
         vl_msg_print_watchman(&pkt);
     }
@@ -244,7 +244,7 @@ void _log_hmd_light(unsigned char *buffer, int size) {
         //vl_msg_print_hmd_light(&pkt);
         vl_msg_print_hmd_light_csv(&pkt);
     } else if (buffer[0] == VL_MSG_CONTROLLER_LIGHT) {
-        vive_headset_lighthouse_pulse_report1 pkt;
+        vive_headset_lighthouse_pulse_report1 pkt = vive_headset_lighthouse_pulse_report1();
         vl_msg_decode_controller_light(&pkt, buffer, size);
         vl_msg_print_controller_light(&pkt);
     }
