@@ -7,8 +7,7 @@ project(org_osvr_Vive_Libre)
 set (org_osvr_Vive_Libre_VERSION_MAJOR 0)
 set (org_osvr_Vive_Libre_VERSION_MINOR 1)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-include(CopyImportedTarget)
+# include(CopyImportedTarget)
 include(GNUInstallDirs)
 include(FindPkgConfig)
 
@@ -39,9 +38,6 @@ add_cxxflag("-Wlogical-op -Wredundant-decls")
 #add_cxxflag("-Wmissing-declarations")
 
 include_directories(${EIGEN3_INCLUDE_DIR} ${HIDAPI_INCLUDE_DIRS} src)
-
-
-message("found JsonCpp_LIBRARIES libs: ${JSONCPP_LIBRARIES}")
 
 # Build the plugin
 osvr_convert_json(org_osvr_Vive_Libre_json
