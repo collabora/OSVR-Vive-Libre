@@ -5,11 +5,11 @@ cmake_install.cmake
 com_osvr_Vive_Libre_json.h
 lib64/
 lib/
+bin/
 org_osvr_example_Tracker_json.h
 CMakeLists.txt.user
-testbin
 com_osvr_Vive_json.h
 org_osvr_Vive_Libre_json.h
-libvive-libre.so
-vivectl
-
+vgcore.*
+valgrind/suppressions/current.supp
+valgrind/suppressions/fix.supp

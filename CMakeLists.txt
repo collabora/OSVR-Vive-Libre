@@ -24,6 +24,10 @@ PKG_CHECK_MODULES (HIDAPI REQUIRED hidapi-libusb)
 PKG_CHECK_MODULES (ZLIB REQUIRED zlib)
 PKG_CHECK_MODULES (JSONCPP REQUIRED jsoncpp)
 
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 function(add_cxxflag FLAG)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FLAG}" PARENT_SCOPE)
 endfunction(add_cxxflag)
@@ -42,7 +46,7 @@ message("found JsonCpp_LIBRARIES libs: ${JSONCPP_LIBRARIES}")
 # Build the plugin
 osvr_convert_json(org_osvr_Vive_Libre_json
     config/org_osvr_Vive_Libre.json
-    "${CMAKE_CURRENT_BINARY_DIR}/org_osvr_Vive_Libre_json.h")
+    "${CMAKE_CURRENT_SOURCE_DIR}/org_osvr_Vive_Libre_json.h")
 
 set(SOURCES
     src/hidraw.h
@@ -67,7 +71,7 @@ target_link_libraries(vive-libre
 set(OSVR_PLUGIN_SOURCES
     src/org_osvr_Vive_Libre.cpp
     ${SOURCES}
-    "${CMAKE_CURRENT_BINARY_DIR}/org_osvr_Vive_Libre_json.h")
+    "${CMAKE_CURRENT_SOURCE_DIR}/org_osvr_Vive_Libre_json.h")
 
 osvr_add_plugin(org_osvr_Vive_Libre ${OSVR_PLUGIN_SOURCES})
 
@@ -95,8 +99,8 @@ install(TARGETS vivectl DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # tests
 
-add_executable(minimal-hid tests/minimal-hid.cpp)
-target_link_libraries(minimal-hid ${HIDAPI_LIBRARIES})
+add_executable(test-minimal-hid tests/minimal-hid.cpp)
+target_link_libraries(test-minimal-hid ${HIDAPI_LIBRARIES})
 
-add_executable(hid-enumerate tests/hid-enumerate.cpp)
-target_link_libraries(hid-enumerate ${HIDAPI_LIBRARIES})
+add_executable(test-hid-enumerate tests/hid-enumerate.cpp)
+target_link_libraries(test-hid-enumerate ${HIDAPI_LIBRARIES})
