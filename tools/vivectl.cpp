@@ -177,7 +177,7 @@ static void pnp_from_csv(const std::string& file_path) {
 
     vl_lighthouse_samples samples = parse_csv_file(file_path);
     if (!samples.empty())
-        try_pnp(&samples, config_sensor_positions);
+        dump_pnp_positions(&samples, config_sensor_positions);
 }
 
 static void send_hmd_off() {

@@ -804,16 +804,13 @@ void vl_light_classify_samples(vl_lighthouse_samples *raw_light_samples) {
         write_readings_to_csv(R_C, "c_angles.csv");
 }
 
-#include <iostream>
-
-void print_first_pnp(const std::string& file_name,
+void dump_readings_to_csv(const std::string& file_name,
                      const std::map<unsigned, vl_angles>& readings,
                      const std::map<unsigned, cv::Point3f>& config_sensor_positions) {
     cv::Mat rvec, tvec;
 
     //bool useExtrinsicGuess=false;
     //int flags=ITERATIVE;
-
 
     std::vector<cv::Point3f> configSensors;
     std::vector<cv::Point2f> foundSensors;
@@ -837,15 +834,9 @@ void print_first_pnp(const std::string& file_name,
                 configSensors.push_back(config_sensor_positions.at(angles.first));
         }
 
-        bool ret = solvePnP(cv::Mat(configSensors), cv::Mat(foundSensors), cameraMatrix,
-                 distCoeffs, rvec, tvec);
-
-
-        //bool ret = solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec, useExtrinsicGuess, flags);
-
-        //printf("solvePnP: %d\n", ret);
-        //std::cout << "rvec = \n "  << rvec << "\n\n";
-        //std::cout << "tvec = \n "  << tvec << "\n\n";
+        if (!solvePnP(cv::Mat(configSensors), cv::Mat(foundSensors), cameraMatrix,
+                 distCoeffs, rvec, tvec))
+            printf("error: PnP returned 0.\n");
 
         csv_file << tvec.at<double>(0) << ","
                  << tvec.at<double>(1) << ","
@@ -857,7 +848,7 @@ void print_first_pnp(const std::string& file_name,
 }
 
 
-void try_pnp(vl_lighthouse_samples *raw_light_samples,
+void dump_pnp_positions(vl_lighthouse_samples *raw_light_samples,
              const std::map<unsigned, cv::Point3f>& config_sensor_positions) {
     vl_lighthouse_samples sanitized_light_samples = filter_reports(*raw_light_samples, &is_sample_valid);
     std::vector<vl_light_sample_group> pulses;
@@ -866,7 +857,7 @@ void try_pnp(vl_lighthouse_samples *raw_light_samples,
     std::map<unsigned, vl_angles> R_B = collect_readings('B', sweeps);
     std::map<unsigned, vl_angles> R_C = collect_readings('C', sweeps);
 
-    print_first_pnp("b_positions.csv", R_B, config_sensor_positions);
-    print_first_pnp("c_positions.csv", R_C, config_sensor_positions);
+    dump_readings_to_csv("b_positions.csv", R_B, config_sensor_positions);
+    dump_readings_to_csv("c_positions.csv", R_C, config_sensor_positions);
 
 }
