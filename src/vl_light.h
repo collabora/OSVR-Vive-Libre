@@ -806,14 +806,9 @@ void vl_light_classify_samples(vl_lighthouse_samples *raw_light_samples) {
 
 #include <iostream>
 
-void try_pnp(vl_lighthouse_samples *raw_light_samples, const std::map<unsigned, cv::Point3f>& config_sensor_positions) {
-    vl_lighthouse_samples sanitized_light_samples = filter_reports(*raw_light_samples, &is_sample_valid);
-    std::vector<vl_light_sample_group> pulses;
-    std::vector<vl_light_sample_group> sweeps;
-    std::tie(sweeps, pulses) = process_lighthouse_samples(sanitized_light_samples);
-    std::map<unsigned, vl_angles> R_B = collect_readings('B', sweeps);
-    std::map<unsigned, vl_angles> R_C = collect_readings('C', sweeps);
-
+void print_first_pnp(const std::string& file_name,
+                     const std::map<unsigned, vl_angles>& readings,
+                     const std::map<unsigned, cv::Point3f>& config_sensor_positions) {
     cv::Mat rvec, tvec;
 
     //bool useExtrinsicGuess=false;
@@ -827,21 +822,51 @@ void try_pnp(vl_lighthouse_samples *raw_light_samples, const std::map<unsigned, 
     //cv::Mat distCoeffs = cv::Mat::zeros(3, 3, CV_64F);
     cv::Mat distCoeffs;
 
-    for (auto angles : R_B) {
+    unsigned sample_count = readings.begin()->second.x.size();
 
-       // for (unsigned i = 0; i < angles.second.x.size(); i++ )
-            foundSensors.push_back(cv::Point2f(angles.second.x[0], angles.second.y[0]));
-            configSensors.push_back(config_sensor_positions.at(angles.first));
+    std::ofstream csv_file;
+    csv_file.open (file_name);
+
+    printf("Writing %u %s\n", sample_count, file_name.c_str());
+
+    for (unsigned i = 0; i < sample_count; i++) {
+
+        for (auto angles : readings) {
+           // for (unsigned i = 0; i < angles.second.x.size(); i++ )
+                foundSensors.push_back(cv::Point2f(angles.second.x[i], angles.second.y[i]));
+                configSensors.push_back(config_sensor_positions.at(angles.first));
+        }
+
+        bool ret = solvePnP(cv::Mat(configSensors), cv::Mat(foundSensors), cameraMatrix,
+                 distCoeffs, rvec, tvec);
+
+
+        //bool ret = solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec, useExtrinsicGuess, flags);
+
+        //printf("solvePnP: %d\n", ret);
+        //std::cout << "rvec = \n "  << rvec << "\n\n";
+        //std::cout << "tvec = \n "  << tvec << "\n\n";
+
+        csv_file << tvec.at<double>(0) << ","
+                 << tvec.at<double>(1) << ","
+                 << tvec.at<double>(2) << "\n";
+
     }
 
-    bool ret = solvePnP(cv::Mat(configSensors), cv::Mat(foundSensors), cameraMatrix,
-             distCoeffs, rvec, tvec);
+    csv_file.close();
+}
 
 
-    //bool ret = solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec, useExtrinsicGuess, flags);
+void try_pnp(vl_lighthouse_samples *raw_light_samples,
+             const std::map<unsigned, cv::Point3f>& config_sensor_positions) {
+    vl_lighthouse_samples sanitized_light_samples = filter_reports(*raw_light_samples, &is_sample_valid);
+    std::vector<vl_light_sample_group> pulses;
+    std::vector<vl_light_sample_group> sweeps;
+    std::tie(sweeps, pulses) = process_lighthouse_samples(sanitized_light_samples);
+    std::map<unsigned, vl_angles> R_B = collect_readings('B', sweeps);
+    std::map<unsigned, vl_angles> R_C = collect_readings('C', sweeps);
 
-    printf("solvePnP: %d\n", ret);
+    print_first_pnp("b_positions.csv", R_B, config_sensor_positions);
+    print_first_pnp("c_positions.csv", R_C, config_sensor_positions);
 
-    std::cout << "rvec = \n "  << rvec << "\n\n";
-    std::cout << "tvec = \n "  << tvec << "\n\n";
 }
