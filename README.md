@@ -20,6 +20,12 @@ Our efforts at analysing the Lighthouse signal can be found at
 
 OSVR Vive Libre is available on the Arch User Repository. (AUR: [osvr-vive-libre-git](https://aur.archlinux.org/packages/osvr-vive-libre-git)).
 
+## Dependencies
+
+OSVR-Vive-Libre requires OSVR-Core, Eigen, OpenCV, jsoncpp, zlib and hidapi-libusb to be compiled.
+
+Optional dependencies for testing are OSVR-Tracker-Viewer and OSVR-RenderManager.
+
 ## Build
 
 We use CMake
