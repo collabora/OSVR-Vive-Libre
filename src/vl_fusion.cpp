@@ -29,7 +29,8 @@
 #include "vl_math.h"
 
 vl_fusion::vl_fusion() {
-    orientation = Eigen::Quaterniond(0, -1, 0, 0);
+    orientation = Eigen::AngleAxisd(0.5*M_PI, Eigen::Vector3d::UnitY()) * Eigen::Quaterniond(0, -1, 0, 0);
+
     fq_acceleration = new vl_filter_queue(20);
     fq_angular_velocity = new vl_filter_queue(20);
     grav_gain = 0.05f;
