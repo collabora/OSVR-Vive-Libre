@@ -96,8 +96,16 @@ install(TARGETS vivectl DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # tests
 
-add_executable(test-minimal-hid tests/minimal-hid.cpp)
-target_link_libraries(test-minimal-hid ${HIDAPI_LIBRARIES})
+enable_testing()
 
-add_executable(test-hid-enumerate tests/hid-enumerate.cpp)
+add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
+
+#add_executable(test-minimal-hid EXCLUDE_FROM_ALL tests/minimal-hid.cpp)
+#target_link_libraries(test-minimal-hid ${HIDAPI_LIBRARIES})
+#add_test(some-test bin/test-minimal-hid)
+#add_dependencies(check test-minimal-hid)
+
+add_executable(test-hid-enumerate EXCLUDE_FROM_ALL tests/hid-enumerate.cpp)
 target_link_libraries(test-hid-enumerate ${HIDAPI_LIBRARIES})
+add_test(hid bin/test-hid-enumerate)
+add_dependencies(check test-hid-enumerate)
