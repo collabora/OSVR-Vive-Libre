@@ -45,13 +45,13 @@ vl_fusion::~vl_fusion() {
 #define GRAVITY_EARTH 9.82f
 
 
-Eigen::Quaterniond* vl_fusion::correct_gravity(const Eigen::Vector3d* acceleration, float ang_vel_length) {
+Eigen::Quaterniond* vl_fusion::correct_gravity(const Eigen::Vector3d& acceleration, float ang_vel_length) {
     const double gravity_tolerance = .4f, ang_vel_tolerance = .1f;
     const double min_tilt_error = 0.05f, max_tilt_error = 0.01f;
 
     // if the device is within tolerance levels, count this as the device is level and add to the counter
     // otherwise reset the counter and start over
-    if (ang_vel_length < ang_vel_tolerance && fabsf(acceleration->norm() - GRAVITY_EARTH) < gravity_tolerance)
+    if (ang_vel_length < ang_vel_tolerance && fabsf(acceleration.norm() - GRAVITY_EARTH) < gravity_tolerance)
         device_level_count++;
 
 
@@ -68,7 +68,7 @@ Eigen::Quaterniond* vl_fusion::correct_gravity(const Eigen::Vector3d* accelerati
         // The values are optimized of what we would get out
         // from the cross product.
         Eigen::Vector3d up = Eigen::Vector3d::UnitY();
-        double tilt_angle = vector_get_angle(&up, &acceleration_mean);
+        double tilt_angle = vector_get_angle(up, acceleration_mean);
 
         if(tilt_angle > max_tilt_error){
             Eigen::Vector3d tilt_e = Eigen::Vector3d(
@@ -96,7 +96,7 @@ Eigen::Quaterniond* vl_fusion::correct_gravity(const Eigen::Vector3d* accelerati
         }
 
         // perform the correction
-        return quat_init_axis(&this->grav_error_axis, use_angle);
+        return quat_init_axis(this->grav_error_axis, use_angle);
     }
 
     return nullptr;
@@ -107,10 +107,9 @@ vl_filter_queue::vl_filter_queue(int size) {
     this->size = size;
 }
 
-void vl_filter_queue::add(Eigen::Vector3d vec)
+void vl_filter_queue::add(const Eigen::Vector3d& vec)
 {
-    Eigen::Vector3d v = Eigen::Vector3d(vec.x(), vec.y(), vec.z());
-    queue.push_back(v);
+    queue.emplace_back(vec.x(), vec.y(), vec.z());
     if (queue.size() > size)
         queue.pop_front();
 }
@@ -144,7 +143,7 @@ void vl_fusion::update(float dt, const Eigen::Vector3d& angular_velocity, const 
     }
 
     // gravity correction
-    Eigen::Quaterniond* correction = correct_gravity(&acceleration, ang_vel_length);
+    Eigen::Quaterniond* correction = correct_gravity(acceleration, ang_vel_length);
     if (correction != nullptr) {
         orientation = *correction * orientation;
         delete(correction);
@@ -154,6 +153,6 @@ void vl_fusion::update(float dt, const Eigen::Vector3d& angular_velocity, const 
     // inprecision with quat multiplication.
     orientation.normalize();
 
-    // print_eigen_quat("pose", &orientation);
+    // print_eigen_quat("pose", orientation);
     mutex_fusion_update.unlock();
 }

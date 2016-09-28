@@ -40,7 +40,7 @@ class vl_filter_queue {
 public:
     vl_filter_queue(int size);
     ~vl_filter_queue();
-    void add(Eigen::Vector3d vec);
+    void add(const Eigen::Vector3d& vec);
     Eigen::Vector3d get_mean();
 };
 
@@ -65,7 +65,7 @@ private:
     Eigen::Vector3d grav_error_axis;
     double grav_gain; // amount of correction
 
-    Eigen::Quaterniond* correct_gravity(const Eigen::Vector3d* acceleration, float ang_vel_length);
+    Eigen::Quaterniond* correct_gravity(const Eigen::Vector3d& acceleration, float ang_vel_length);
 
 public:
     Eigen::Quaterniond orientation;
