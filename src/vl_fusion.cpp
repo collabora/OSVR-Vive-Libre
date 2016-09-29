@@ -110,9 +110,9 @@ void vl_filter_queue::add(const Eigen::Vector3d& vec)
 }
 Eigen::Vector3d vl_filter_queue::get_mean()
 {
-    Eigen::Vector3d mean;
-    for(Eigen::Vector3d vec : queue)
-           mean += vec;
+    Eigen::Vector3d mean(0., 0., 0.);
+    for(const Eigen::Vector3d& vec : queue)
+        mean += vec;
     return mean / (double)queue.size();
 }
 
