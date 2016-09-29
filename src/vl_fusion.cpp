@@ -24,6 +24,7 @@
  * Boston, MA 02110-1335, USA.
  */
 
+#include <cmath>
 #include <memory>
 #include <string.h>
 #include "vl_fusion.h"
@@ -47,7 +48,7 @@ Eigen::Quaterniond* vl_fusion::correct_gravity(const Eigen::Vector3d& accelerati
 
     // if the device is within tolerance levels, count this as the device is level and add to the counter
     // otherwise reset the counter and start over
-    if (ang_vel_length < ang_vel_tolerance && fabsf(acceleration.norm() - GRAVITY_EARTH) < gravity_tolerance)
+    if (ang_vel_length < ang_vel_tolerance && std::fabs(acceleration.norm() - GRAVITY_EARTH) < gravity_tolerance)
         device_level_count++;
 
 
