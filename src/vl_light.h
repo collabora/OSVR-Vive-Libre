@@ -680,7 +680,7 @@ void write_readings_to_csv(const std::map<unsigned, vl_angles>& readings, const 
 std::string epoch_to_string(double epoch) {
         std::string epoch_string;
 
-        char* buffer = new char[50];
+        char buffer[50];
         double intpart;
 
         if( modf (epoch , &intpart) == 0 )
@@ -689,7 +689,6 @@ std::string epoch_to_string(double epoch) {
             sprintf (buffer, "%.1f", epoch);
 
         std::string out(buffer);
-        delete (buffer);
 
         return out;
 }
@@ -722,12 +721,10 @@ std::string light_house_samples_to_string(const vl_lighthouse_samples& samples) 
                 lengths << "  ";
         }
 
-        char* buffer = new char[1000];
+        char buffer[1000];
         sprintf (buffer, SAMPLES_STRING, timestamps.str().c_str(), sensor_ids.str().c_str(), lengths.str().c_str());
 
         std::string out(buffer);
-
-        delete (buffer);
 
         return out;
 
@@ -756,10 +753,9 @@ void write_light_groups_to_file(const std::string& title,
     for (unsigned i = 0; i < pulses.size(); i++) {
         vl_light_sample_group g = pulses.at(i);
         std::string samples = light_house_samples_to_string(g.samples);
-        char* buffer = new char[1000];
+        char buffer[1000];
         fun(buffer, g, samples, i);
         fid << buffer;
-        delete(buffer);
     }
     fid.close();
 }
