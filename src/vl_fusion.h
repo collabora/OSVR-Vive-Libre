@@ -47,8 +47,6 @@ public:
 
 class vl_fusion {
 private:
-	int state;
-
     std::mutex mutex_fusion_update;
 
     Eigen::Vector3d acceleration;
