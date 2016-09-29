@@ -33,7 +33,7 @@ endfunction(add_cxxflag)
 # enable some gcc warnings
 add_cxxflag("-Wall -Wno-long-long -pedantic -Wextra -Wundef -Woverflow")
 add_cxxflag("-Woverloaded-virtual -Wformat=2 -Wpointer-arith -Wcast-qual")
-add_cxxflag("-Wlogical-op -Wredundant-decls")
+add_cxxflag("-Wredundant-decls")
 #add_cxxflag("-Wmissing-declarations")
 
 include_directories(${EIGEN3_INCLUDE_DIR} ${HIDAPI_INCLUDE_DIRS} src)
