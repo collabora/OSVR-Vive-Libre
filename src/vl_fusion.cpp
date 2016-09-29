@@ -24,6 +24,7 @@
  * Boston, MA 02110-1335, USA.
  */
 
+#include <memory>
 #include <string.h>
 #include "vl_fusion.h"
 #include "vl_math.h"
@@ -31,14 +32,9 @@
 vl_fusion::vl_fusion() {
     orientation = Eigen::AngleAxisd(0.5*M_PI, Eigen::Vector3d::UnitY()) * Eigen::Quaterniond(0, -1, 0, 0);
 
-    fq_acceleration = new vl_filter_queue(20);
-    fq_angular_velocity = new vl_filter_queue(20);
+    fq_acceleration = std::make_unique<vl_filter_queue>(20);
+    fq_angular_velocity = std::make_unique<vl_filter_queue>(20);
     grav_gain = 0.05f;
-}
-
-vl_fusion::~vl_fusion() {
-    delete(fq_acceleration);
-    delete(fq_angular_velocity);
 }
 
 
@@ -102,7 +98,6 @@ Eigen::Quaterniond* vl_fusion::correct_gravity(const Eigen::Vector3d& accelerati
     return nullptr;
 }
 
-vl_filter_queue::~vl_filter_queue() {}
 vl_filter_queue::vl_filter_queue(int size) {
     this->size = size;
 }
