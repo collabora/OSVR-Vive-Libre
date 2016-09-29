@@ -65,7 +65,6 @@ class vl_driver {
 
 typedef std::function<void(unsigned char*,int)> query_fun;
 
-#define FEATURE_BUFFER_SIZE 256
 static inline void hid_query(hid_device* dev, query_fun fun) {
     int size = 0;
     unsigned char buffer[FEATURE_BUFFER_SIZE];
