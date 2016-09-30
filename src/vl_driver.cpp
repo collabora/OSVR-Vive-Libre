@@ -27,21 +27,22 @@
 #include <vector>
 #include <map>
 
+#include <libusb.h>
+
 #include "vl_driver.h"
 #include "vl_math.h"
 #include "vl_log.h"
 
 vl_driver::vl_driver() {
-    hid_init();
+    libusb_init(&context);
     previous_ticks = 0;
 }
 
 vl_driver::~vl_driver() {
-    hid_close(hmd_device.handle);
-    hid_close(hmd_imu_device.handle);
-    hid_close(watchman_dongle_device.handle);
-    hid_close(hmd_light_sensor_device.handle);
-    hid_exit();
+    libusb_close(hmd_device.handle);
+    libusb_close(hmd_lighthouse_device.handle);
+    libusb_close(watchman_dongle_device.handle);
+    libusb_exit(context);
 }
 
 bool vl_driver::init_devices(unsigned index) {
@@ -51,117 +52,169 @@ bool vl_driver::init_devices(unsigned index) {
     return success;
 }
 
-static void print_info_string(int (*fun)(hid_device*, wchar_t*, size_t), const char* what, hid_device* device)
-{
-    wchar_t wbuffer[512] = {0};
-    char buffer[1024] = {0};
-
-    int hret = fun(device, wbuffer, 511);
-
-    if(hret == 0){
-        wcstombs(buffer, wbuffer, sizeof(buffer));
-        vl_info("%s: '%s'\n", what, buffer);
+static void print_device_info(libusb_device_handle* dev, const libusb_device_descriptor& desc) {
+    uint8_t string[255];
+    struct {
+        uint8_t index;
+        const char* descriptor;
+    } info[] = {
+        {desc.iManufacturer, "Manufacturer"},
+        {desc.iProduct, "Product"},
+        {desc.iSerialNumber, "Serial number"},
+    };
+    for (int i : {0, 1, 2}) {
+        if (libusb_get_string_descriptor_ascii(dev, info[i].index, string, sizeof(string)) >= 0)
+            vl_info("%s: %s", info[i].descriptor, string);
     }
 }
 
-void print_device_info(hid_device* dev) {
-    print_info_string(hid_get_manufacturer_string, "Manufacturer", dev);
-    print_info_string(hid_get_product_string , "Product", dev);
-    print_info_string(hid_get_serial_number_string, "Serial Number", dev);
+static std::string _hid_to_unix_path(libusb_device* dev)
+{
+   // TODO: find a better way to obtain a constexpr length from a constant string.
+   // strlen("/dev/bus/usb/000/000") == 20
+   constexpr size_t path_len = 20;
+   char path[path_len + 1];
+
+   uint8_t bus = libusb_get_bus_number(dev);
+   uint8_t addr = libusb_get_device_address(dev);
+
+   sprintf(path, "/dev/bus/usb/%03d/%03d", bus, addr);
+   return std::string(path);
 }
 
-
-static char* _hid_to_unix_path(char* path)
+static bool open_device_idx(libusb_device** devs, vl_device& device, uint16_t manufacturer, uint16_t product, int device_index)
 {
-       const int len = 4;
-       char bus [len];
-       char dev [len];
-       char *result = new char[20 + 1];
+    libusb_device* dev;
+    int idx = 0, index = -1;
+    while ((dev = devs[idx++])) {
+        libusb_device_descriptor desc;
+        libusb_device_handle* handle;
 
-       sprintf (bus, "%.*s\n", len, path);
-       sprintf (dev, "%.*s\n", len, path + 5);
+        int ret = libusb_get_device_descriptor(dev, &desc);
+        if (ret < 0) {
+            vl_error("Failed to get device descriptor for device %d.", idx);
+            continue;
+        }
 
-       sprintf (result, "/dev/bus/usb/%03d/%03d",
-               (int)strtol(bus, NULL, 16),
-               (int)strtol(dev, NULL, 16));
-       return result;
-}
+        if (desc.idVendor != manufacturer || desc.idProduct != product)
+            continue;
 
+        ++index;
+        vl_debug("Found device %04X:%04X %d/%d", manufacturer, product, index + 1,
+                 device_index + 1);
 
-static bool open_device_idx(vl_device& device, int manufacturer, int product, int iface, int iface_tot, int device_index)
-{
-    struct hid_device_info* devs = hid_enumerate(manufacturer, product);
-    struct hid_device_info* cur_dev = devs;
+        if (index != device_index) {
+            vl_debug("Requested Vive %d but currently at %d, skipping.",
+                     device_index, index);
+            continue;
+        }
 
-    int idx = 0;
-    int iface_cur = 0;
-    hid_device* ret = NULL;
+        // The Vive only exposes a single configuration for each of the devices.
+        assert(desc.bNumConfigurations == 1);
 
-    if (!devs) {
-        vl_error("No hid devices found.");
-        return false;
-    }
+        struct libusb_config_descriptor *conf_desc;
+        ret = libusb_get_config_descriptor(dev, 0, &conf_desc);
+        if (ret != 0)
+            continue;
 
-    // vl_debug("Opening %04x:%04x %d/%d", manufacturer, product, iface+1, iface_tot);
+        ret = libusb_open(dev, &handle);
+        if (ret != LIBUSB_SUCCESS) {
+            std::string path = _hid_to_unix_path(dev);
+            vl_warn("Failed to open device %04X:%04X.\nIs another driver "
+                    "running?  Do you have the correct udev rules in "
+                    "place?", manufacturer, product);
+            vl_warn("Try: sudo chmod 666 %s", path.c_str());
+            continue;
+        }
 
-    while (cur_dev) {
-        if(idx == device_index && iface == iface_cur) {
-            ret = hid_open_path(cur_dev->path);
+        print_device_info(handle, desc);
 
-            if (ret == NULL) {
-                char* path = _hid_to_unix_path(cur_dev->path);
-                vl_warn("Opening failed. Is another driver running? Do you have the correct udev rules in place?");
-                vl_warn("Try: sudo chmod 666 %s", path);
-                free(path);
-                hid_free_enumeration(devs);
-                return false;
+        uint8_t nb_interfaces = conf_desc->bNumInterfaces;
+        std::vector<int> interfaces = {};
+        vl_debug("nb_interfaces: %d", nb_interfaces);
+
+        // Currently use all interfaces, even the ones we don’t use yet.
+        for (int i = 0; i < nb_interfaces; ++i) {
+            const struct libusb_interface *interface = &conf_desc->interface[i];
+
+            // All Vive devices have only a single altsetting per interface.
+            assert(interface->num_altsetting == 1);
+            const struct libusb_interface_descriptor *altsetting = &interface->altsetting[0];
+            int iface = altsetting->bInterfaceNumber;
+
+            uint8_t string[128];
+            vl_debug("  interface: %d", iface);
+            if (libusb_get_string_descriptor_ascii(handle, altsetting->iInterface, string, 128) >= 0)
+                vl_debug("    name: %s", string);
+
+            for (int k = 0; k < altsetting->bNumEndpoints; ++k) {
+                const struct libusb_endpoint_descriptor *endpoint = &altsetting->endpoint[k];
+                vl_debug("    endpoint: 0x%x, interval: %d", endpoint->bEndpointAddress, endpoint->bInterval);
             }
 
+            // In order to send and receive things on an interface we need to claim
+            // it, and to unclaim it from the kernel first.
+            if (libusb_kernel_driver_active(handle, iface) == 1) {
+                ret = libusb_detach_kernel_driver(handle, iface);
+                if (ret != LIBUSB_SUCCESS) {
+                    vl_warn("Failed to unclaim interface %d for device %04X:%04X "
+                            "from the kernel.", iface, manufacturer, product);
+                    libusb_free_config_descriptor(conf_desc);
+                    libusb_close(handle);
+                    continue;
+                }
+            }
+
+            ret = libusb_claim_interface(handle, iface);
+            if (ret != LIBUSB_SUCCESS) {
+                vl_warn("Failed to claim interface %d for device %04X:%04X.",
+                        iface, manufacturer, product);
+                libusb_free_config_descriptor(conf_desc);
+                libusb_close(handle);
+                continue;
+            }
+
+            interfaces.push_back(iface);
         }
-        cur_dev = cur_dev->next;
-        iface_cur++;
-        if(iface_cur >= iface_tot){
-            idx++;
-            iface_cur = 0;
-        }
-    }
-    hid_free_enumeration(devs);
 
-    if (!ret) {
-        vl_error("Couldn’t find device %04d:%04d interface %d, check that it is plugged in.", manufacturer, product, iface);
-        return false;
+        libusb_free_config_descriptor(conf_desc);
+
+        device.handle = handle;
+        device.interfaces = std::move(interfaces);
+
+        return true;
     }
 
-    if(hid_set_nonblocking(ret, 1) == -1){
-        vl_error("failed to set non-blocking on device.");
-        return false;
-    }
-
-    // print_device_info(ret);
-
-    device.handle = ret;
-    return true;
+    return false;
 }
 
 bool vl_driver::open_devices(int idx)
 {
-    // Open the HMD device
-    bool success = open_device_idx(hmd_device, HTC_ID, VIVE_HMD, 0, 1, idx);
-    if (!success)
+    libusb_device** devs;
+
+    int ret = libusb_get_device_list(context, &devs);
+    if (ret < 0) {
+        vl_error("Failed to enumerate USB devices, check your permissions.");
         return false;
+    }
+
+    // Open the HMD device
+    bool success = open_device_idx(devs, hmd_device, HTC_ID, VIVE_HMD, idx);
+    if (!success) {
+        vl_error("No connected VIVE found.");
+        return false;
+    }
 
     // Open the lighthouse device
-    success = open_device_idx(hmd_imu_device, VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 0, 2, idx);
+    success = open_device_idx(devs, hmd_lighthouse_device, VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, idx);
     if (!success)
         return false;
 
-    success = open_device_idx(hmd_light_sensor_device, VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 1, 2, idx);
+    success = open_device_idx(devs, watchman_dongle_device, VALVE_ID, VIVE_WATCHMAN_DONGLE, idx);
     if (!success)
         return false;
 
-    success = open_device_idx(watchman_dongle_device, VALVE_ID, VIVE_WATCHMAN_DONGLE, 1, 2, idx);
-    if (!success)
-        return false;
+    libusb_free_device_list(devs, 1);
 
     //hret = hid_send_feature_report(drv->hmd_device, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
     //vl_debug("enable lighthouse magic: %d\n", hret);
@@ -189,23 +242,29 @@ static Eigen::Vector3d vec3_from_gyro(const __s16* smp)
 }
 
 
-void _log_watchman(unsigned char *buffer, int size) {
-    if (buffer[0] == VL_MSG_WATCHMAN) {
-        vive_controller_report1 pkt = vive_controller_report1();
-        vl_msg_decode_watchman(&pkt, buffer, size);
-        vl_msg_print_watchman(&pkt);
+void vl_driver_log_watchman(uint8_t* buffer, int size) {
+    if (buffer[0] != VL_MSG_WATCHMAN) {
+        vl_warn("Called %s with a wrong buffer type (0x%02x).", __func__, buffer[0]);
+        return;
     }
+
+    vive_controller_report1 pkt = vive_controller_report1();
+    vl_msg_decode_watchman(&pkt, buffer, size);
+    vl_msg_print_watchman(&pkt);
 }
 
-void _log_hmd_imu(unsigned char *buffer, int size) {
-    if (buffer[0] == VL_MSG_HMD_IMU) {
-        vive_headset_imu_report pkt;
-        vl_msg_decode_hmd_imu(&pkt, buffer, size);
-        vl_msg_print_hmd_imu(&pkt);
+void vl_driver_log_hmd_imu(unsigned char *buffer, int size) {
+    if (buffer[0] != VL_MSG_HMD_IMU) {
+        vl_warn("Called %s with a wrong buffer type (0x%02x).", __func__, buffer[0]);
+        return;
     }
+
+    vive_headset_imu_report pkt;
+    vl_msg_decode_hmd_imu(&pkt, buffer, size);
+    vl_msg_print_hmd_imu(&pkt);
 }
 
-void _log_hmd_light(unsigned char *buffer, int size) {
+void vl_driver_log_hmd_light(uint8_t* buffer, int size) {
     if (buffer[0] == VL_MSG_HMD_LIGHT) {
         vive_headset_lighthouse_pulse_report2 pkt;
         vl_msg_decode_hmd_light(&pkt, buffer, size);
@@ -215,19 +274,107 @@ void _log_hmd_light(unsigned char *buffer, int size) {
         vive_headset_lighthouse_pulse_report1 pkt = vive_headset_lighthouse_pulse_report1();
         vl_msg_decode_controller_light(&pkt, buffer, size);
         vl_msg_print_controller_light(&pkt);
+    } else {
+        vl_warn("Called %s with a wrong buffer type (0x%02x).", __func__, buffer[0]);
     }
 }
 
-void vl_driver_log_watchman(vl_device& dev) {
-    hid_query(dev.handle, &_log_watchman);
+static void handle_transfer(libusb_transfer* transfer) {
+    if (transfer->status == LIBUSB_TRANSFER_CANCELLED) {
+        vl_debug("Transfer cancelled.");
+        libusb_free_transfer(transfer);
+        return;
+    }
+
+    if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
+        vl_error("Transfer had an issue: %d", transfer->status);
+        return;
+    }
+
+    vl_debug("Transfer complete of %d bytes!", transfer->actual_length);
+
+    capture_callback func = reinterpret_cast<capture_callback>(transfer->user_data);
+    func(transfer->buffer, transfer->actual_length);
+
+    libusb_error ret = static_cast<libusb_error>(libusb_submit_transfer(transfer));
+    if (ret != LIBUSB_SUCCESS) {
+        vl_error("Failed to submit transfer: %s", libusb_strerror(ret));
+        // TODO: notice the user of the error.
+    }
 }
 
-void vl_driver_log_hmd_imu(vl_device& dev) {
-    hid_query(dev.handle, &_log_hmd_imu);
+static bool vl_driver_start_capture(vl_device& dev, int endpoint, capture_callback fun) {
+    // 0 for no isochronous packet.
+    libusb_transfer* transfer = libusb_alloc_transfer(0);
+    if (!transfer) {
+        vl_error("Failed to allocate memory for USB transfer");
+        return false;
+    }
+
+    dev.transfer_buffers[endpoint] = {};
+    uint8_t* buffer = dev.transfer_buffers[endpoint].data();
+    int length = dev.transfer_buffers[endpoint].size();
+
+    libusb_fill_interrupt_transfer(transfer, dev.handle, endpoint, buffer, length, handle_transfer, reinterpret_cast<void*>(fun), 0);
+
+    libusb_error ret = static_cast<libusb_error>(libusb_submit_transfer(transfer));
+    if (ret) {
+        vl_error("Failed to submit transfer: %s", libusb_strerror(ret));
+        dev.transfer_buffers.erase(endpoint);
+        return false;
+    }
+
+    dev.transfers[endpoint] = transfer;
+
+    return true;
 }
 
-void vl_driver_log_hmd_light(vl_device& dev) {
-    hid_query(dev.handle, &_log_hmd_light);
+// XXX: use that.
+#if 0
+static bool vl_driver_actually_stop_capture(vl_device& dev, int endpoint) {
+    dev.transfer_buffers.erase(endpoint);
+    dev.transfers.erase(endpoint);
+}
+#endif
+
+static bool vl_driver_stop_capture(vl_device& dev, int endpoint) {
+    libusb_transfer* transfer = dev.transfers[endpoint];
+    libusb_cancel_transfer(transfer);
+    return true;
+}
+
+bool vl_driver_start_hmd_imu_capture(vl_driver* driver, capture_callback fun) {
+    return vl_driver_start_capture(driver->hmd_lighthouse_device, 0x81, fun);
+}
+
+bool vl_driver_stop_hmd_imu_capture(vl_driver* driver) {
+    return vl_driver_stop_capture(driver->hmd_lighthouse_device, 0x81);
+}
+
+bool vl_driver_start_watchman_capture(vl_driver* driver, capture_callback fun) {
+    return vl_driver_start_capture(driver->watchman_dongle_device, 0x81, fun);
+}
+
+bool vl_driver_stop_watchman_capture(vl_driver* driver) {
+    return vl_driver_stop_capture(driver->watchman_dongle_device, 0x81);
+}
+
+bool vl_driver_start_hmd_light_capture(vl_driver* driver, capture_callback fun) {
+    return vl_driver_start_capture(driver->hmd_lighthouse_device, 0x82, fun);
+}
+
+bool vl_driver_stop_hmd_light_capture(vl_driver* driver) {
+    return vl_driver_stop_capture(driver->hmd_lighthouse_device, 0x82);
+}
+
+bool vl_driver::poll() {
+    libusb_error ret = static_cast<libusb_error>(libusb_handle_events(context));
+    if (ret != LIBUSB_SUCCESS) {
+        vl_debug("Failed to poll: %s", libusb_strerror(ret));
+        return false;
+    }
+
+    return true;
 }
 
 static bool is_timestamp_valid(uint32_t t1, uint32_t t2) {
@@ -279,5 +426,5 @@ void vl_driver::update_pose() {
             this->_update_pose(pkt);
         }
     };
-    hid_query(hmd_imu_device.handle, update_pose_fun);
+    hid_query(hmd_lighthouse_device.handle, update_pose_fun);
 }

@@ -26,14 +26,20 @@
 
 #pragma once
 
-#include <hidapi.h>
+#include <cassert>
+#include <cstdint>
+#include <map>
+#include <unistd.h>
+#include <vector>
+
+#include <libusb.h>
 
 #include "vl_magic.h"
 #include "vl_fusion.h"
 #include "vl_messages.h"
 #include "vl_log.h"
 
-#define FEATURE_BUFFER_SIZE 256
+#define FEATURE_BUFFER_SIZE 64
 
 #define HTC_ID                   0x0bb4
 #define VIVE_HMD                 0x2c87
@@ -46,15 +52,20 @@
 #define FREQ_48MHZ 1.0f / 48000000.0f
 
 struct vl_device {
-    hid_device* handle = nullptr;
+    libusb_device_handle* handle = nullptr;
+    std::vector<int> interfaces;
+    std::map<int, libusb_transfer*> transfers;
+    std::map<int, std::array<uint8_t, FEATURE_BUFFER_SIZE>> transfer_buffers;
 };
 
 class vl_driver {
-    public:
+private:
+    libusb_context* context;
+
+public:
     vl_device hmd_device;
-    vl_device hmd_imu_device;
+    vl_device hmd_lighthouse_device;
     vl_device watchman_dongle_device;
-    vl_device hmd_light_sensor_device;
     uint32_t previous_ticks;
     std::unique_ptr<vl_fusion> sensor_fusion;
 
@@ -63,24 +74,50 @@ class vl_driver {
     ~vl_driver();
     bool init_devices(unsigned index);
     bool open_devices(int idx);
+    void add_fd(int fd, short events);
+    void remove_fd(int fd);
+    bool poll();
     void update_pose();
 
     void _update_pose(const vive_headset_imu_report &pkt);
 };
 
-typedef std::function<void(unsigned char*,int)> query_fun;
+static inline int hid_send_feature_report(libusb_device_handle* dev, uint16_t interface, std::vector<uint8_t> data) {
+    // Currently not implemented and unused, see hidapi’s implementation.
+    assert(data[0] != 0);
 
-static inline void hid_query(hid_device* dev, query_fun fun) {
-    int size = 0;
-    unsigned char buffer[FEATURE_BUFFER_SIZE];
+    uint16_t report_id = (3/*HID feature*/ << 8) | data[0];
 
-    while((size = hid_read(dev, buffer, FEATURE_BUFFER_SIZE)) > 0)
-        fun(buffer, size);
+    int ret = libusb_control_transfer(dev,
+                                      LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
+                                      0x09/*HID set_report*/,
+                                      report_id,
+                                      interface,
+                                      data.data(), data.size(),
+                                      1000/*timeout millis*/);
+    if (ret < 0)
+        return -1;
 
-    if(size < 0)
-        vl_warn("error reading from device");
+    return data.size();
 }
 
-void vl_driver_log_watchman(vl_device& dev);
-void vl_driver_log_hmd_light(vl_device& dev);
-void vl_driver_log_hmd_imu(vl_device& dev);
+// TODO: remove these two.
+typedef std::function<void(unsigned char*,int)> query_fun;
+static inline void hid_query(libusb_device_handle* dev, query_fun fun) {
+    abort();
+}
+
+void vl_driver_log_hmd_imu(uint8_t* buffer, int size);
+void vl_driver_log_watchman(uint8_t* buffer, int size);
+void vl_driver_log_hmd_light(uint8_t* buffer, int size);
+
+// TODO: find out how to use std::function in a callback context.
+//typedef std::function<void(uint8_t*, int)> capture_callback;
+typedef void(*capture_callback)(uint8_t*, int);
+
+bool vl_driver_start_hmd_imu_capture(vl_driver*, capture_callback);
+bool vl_driver_stop_hmd_imu_capture(vl_driver*);
+bool vl_driver_start_watchman_capture(vl_driver*, capture_callback);
+bool vl_driver_stop_watchman_capture(vl_driver*);
+bool vl_driver_start_hmd_light_capture(vl_driver*, capture_callback);
+bool vl_driver_stop_hmd_light_capture(vl_driver*);

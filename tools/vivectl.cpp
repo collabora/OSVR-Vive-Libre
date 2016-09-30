@@ -7,20 +7,26 @@
 #include "vl_light.h"
 #include "vl_log.h"
 
-vl_driver* driver;
+static bool should_exit = false;
+static vl_driver* driver;
 
 static bool compare(const std::string& str1, const std::string& str2) {
     return str1.compare(str2) == 0;
 }
 
 static void dump_controller() {
-    while(true)
-        vl_driver_log_watchman(driver->watchman_dongle_device);
+    vl_driver_start_watchman_capture(driver, vl_driver_log_watchman);
+    while (!should_exit) {
+        driver->poll();
+    }
+    vl_driver_stop_watchman_capture(driver);
 }
 
 static void dump_hmd_imu() {
-    while(true)
-        vl_driver_log_hmd_imu(driver->hmd_imu_device);
+    vl_driver_start_hmd_imu_capture(driver, vl_driver_log_hmd_imu);
+    while (!should_exit)
+        driver->poll();
+    vl_driver_stop_hmd_imu_capture(driver);
 }
 
 static void dump_hmd_imu_pose() {
@@ -31,21 +37,24 @@ static void dump_hmd_imu_pose() {
 static void send_hmd_on() {
     // turn the display on
     int hret = hid_send_feature_report(driver->hmd_device.handle,
-                                   vive_magic_power_on,
-                                   sizeof(vive_magic_power_on));
+                                   0,
+                                   vive_magic_power_on);
     vl_info("power on magic: %d", hret);
+    while(true);
 }
 
 static void dump_hmd_light() {
     // hmd needs to be on to receive light reports.
     send_hmd_on();
-    while(true)
-        vl_driver_log_hmd_light(driver->hmd_light_sensor_device);
+    vl_driver_start_hmd_light_capture(driver, vl_driver_log_hmd_light);
+    while (!should_exit)
+        driver->poll();
+    vl_driver_stop_hmd_light_capture(driver);
 }
 
 static void dump_config_hmd() {
-    char * config = vl_get_config(driver->hmd_imu_device);
-    vl_info("hmd_imu_device config: %s", config);
+    char * config = vl_get_config(driver->hmd_lighthouse_device, 0);
+    vl_info("hmd_lighthouse_device config: %s", config);
 }
 
 
@@ -68,7 +77,7 @@ static void dump_station_angle() {
     };
 
     while(raw_light_samples->size() < 10000)
-        hid_query(driver->hmd_light_sensor_device.handle, read_hmd_light);
+        hid_query(driver->hmd_lighthouse_device.handle, read_hmd_light);
 
     vl_light_classify_samples(raw_light_samples);
 }
@@ -125,7 +134,9 @@ static void dump_station_angle_from_csv(const std::string& file_path) {
 
 static void pnp_from_csv(const std::string& file_path) {
 
-    std::string config(vl_get_config(driver->hmd_imu_device));
+    // XXX
+    //std::string config(vl_get_config(driver->hmd_lighthouse_device, 0));
+    std::string config = "";
 
     //vl_info("\n\nconfig:\n\n%s\n\n", config.c_str());
 
@@ -184,26 +195,25 @@ static void pnp_from_csv(const std::string& file_path) {
 static void send_hmd_off() {
     // turn the display off
     int hret = hid_send_feature_report(driver->hmd_device.handle,
-                                   vive_magic_power_off1,
-                                   sizeof(vive_magic_power_off1));
+                                   0,
+                                   vive_magic_power_off1);
     vl_debug("power off magic 1: %d", hret);
 
     hret = hid_send_feature_report(driver->hmd_device.handle,
-                                   vive_magic_power_off2,
-                                   sizeof(vive_magic_power_off2));
+                                   0,
+                                   vive_magic_power_off2);
     vl_debug("power off magic 2: %d", hret);
 }
 
 static void send_controller_off() {
     hid_send_feature_report(driver->watchman_dongle_device.handle,
-                            vive_controller_power_off,
-                            sizeof(vive_controller_power_off));
+                            1,
+                            vive_controller_power_off);
 }
 
 static void signal_interrupt_handler(int sig) {
     signal(sig, SIG_IGN);
-    delete(driver);
-    exit(0);
+    should_exit = true;
 }
 
 typedef std::function<void(void)> taskfun;

@@ -18,7 +18,7 @@ find_package(osvr REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
 
-PKG_CHECK_MODULES (HIDAPI REQUIRED hidapi-libusb)
+PKG_CHECK_MODULES (LIBUSB REQUIRED libusb-1.0)
 PKG_CHECK_MODULES (ZLIB REQUIRED zlib)
 PKG_CHECK_MODULES (JSONCPP REQUIRED jsoncpp)
 
@@ -38,7 +38,7 @@ add_cxxflag("-Wredundant-decls")
 
 include_directories(
     ${EIGEN3_INCLUDE_DIR}
-    ${HIDAPI_INCLUDE_DIRS}
+    ${LIBUSB_INCLUDE_DIRS}
     ${JSONCPP_INCLUDE_DIRS}
     src)
 
@@ -65,7 +65,7 @@ set(SOURCES
 
 add_library(vive-libre SHARED ${SOURCES})
 target_link_libraries(vive-libre
-    ${HIDAPI_LIBRARIES}
+    ${LIBUSB_LIBRARIES}
     ${ZLIB_LIBRARIES}
     ${JSONCPP_LIBRARIES}
     ${OpenCV_LIBRARIES})
@@ -81,7 +81,7 @@ target_link_libraries(org_osvr_Vive_Libre
     osvr::osvrPluginKit
     osvr::osvrCommon
     osvr::osvrUtil
-    ${HIDAPI_LIBRARIES}
+    ${LIBUSB_LIBRARIES}
     ${ZLIB_LIBRARIES})
 
 # Install files for the plugin.
@@ -106,11 +106,11 @@ enable_testing()
 add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
 
 #add_executable(test-minimal-hid EXCLUDE_FROM_ALL tests/minimal-hid.cpp)
-#target_link_libraries(test-minimal-hid ${HIDAPI_LIBRARIES})
+#target_link_libraries(test-minimal-hid ${LIBUSB_LIBRARIES})
 #add_test(some-test bin/test-minimal-hid)
 #add_dependencies(check test-minimal-hid)
 
 add_executable(test-hid-enumerate EXCLUDE_FROM_ALL tests/hid-enumerate.cpp)
-target_link_libraries(test-hid-enumerate ${HIDAPI_LIBRARIES})
+target_link_libraries(test-hid-enumerate ${LIBUSB_LIBRARIES})
 add_test(hid bin/test-hid-enumerate)
 add_dependencies(check test-hid-enumerate)

@@ -11,8 +11,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <cstdint>
 
-#include <hidapi.h>
+#include <libusb.h>
 
 #include "vl_config.h"
 #include "vl_hidraw.h"
@@ -21,9 +22,9 @@
 /*
  * Downloads configuration data stored in the Vive headset and controller.
  */
-char *vl_get_config(vl_device& device)
+char *vl_get_config(vl_device& device, uint16_t interface)
 {
-    hid_device* dev = device.handle;
+    libusb_device_handle* dev = device.handle;
     unsigned char buf[64];
     unsigned char *config_json;
     void *config_z;
@@ -32,7 +33,7 @@ char *vl_get_config(vl_device& device)
     int ret;
 
     buf[0] = 0x10;
-    ret = hid_get_feature_report_timeout(dev, buf, sizeof(buf), 100);
+    ret = hid_get_feature_report_timeout(dev, interface, buf, sizeof(buf), 100);
     if (ret < 0) {
         vl_error("%s: Read error 0x10: %d", "devname", errno);
         return NULL;
@@ -42,7 +43,7 @@ char *vl_get_config(vl_device& device)
 
     buf[0] = 0x11;
     do {
-        ret = hid_get_feature_report_timeout(dev, buf, sizeof(buf), 100);
+        ret = hid_get_feature_report_timeout(dev, interface, buf, sizeof(buf), 100);
         if (ret < 0) {
             vl_error("%s: Read error after %d bytes: %d",
                      "devname", count, errno);
