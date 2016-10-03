@@ -36,7 +36,11 @@ add_cxxflag("-Woverloaded-virtual -Wformat=2 -Wpointer-arith -Wcast-qual")
 add_cxxflag("-Wredundant-decls")
 #add_cxxflag("-Wmissing-declarations")
 
-include_directories(${EIGEN3_INCLUDE_DIR} ${HIDAPI_INCLUDE_DIRS} src)
+include_directories(
+    ${EIGEN3_INCLUDE_DIR}
+    ${HIDAPI_INCLUDE_DIRS}
+    ${JSONCPP_INCLUDE_DIRS}
+    src)
 
 # Build the plugin
 osvr_convert_json(org_osvr_Vive_Libre_json
