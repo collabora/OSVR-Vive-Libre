@@ -7,12 +7,11 @@ project(org_osvr_Vive_Libre)
 set (org_osvr_Vive_Libre_VERSION_MAJOR 0)
 set (org_osvr_Vive_Libre_VERSION_MINOR 2)
 
-# include(CopyImportedTarget)
 include(GNUInstallDirs)
 include(FindPkgConfig)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(osvr REQUIRED)
