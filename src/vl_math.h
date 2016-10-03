@@ -22,7 +22,6 @@
 #pragma once
 
 #include <Eigen/Geometry>
-#include <osvr/PluginKit/TrackerInterfaceC.h>
 
 static inline Eigen::Quaterniond switch_coord_order(Eigen::Quaterniond* in) {
     Eigen::Quaterniond q(in->x(), in->y(), in->z(), in->w());

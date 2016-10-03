@@ -8,6 +8,10 @@
 #include <iostream>
 #include <fstream>
 
+#include <opencv2/core.hpp>
+#include <opencv2/core/utility.hpp>
+#include <opencv2/calib3d.hpp>
+
 #include "vl_messages.h"
 
 #define VL_ROTOR_RPS 60 // 60 rps
@@ -479,12 +483,6 @@ vl_lighthouse_samples filter_reports (const vl_lighthouse_samples& reports, cons
 // This function drops all entries { 0xffffffff, 0xff, 0xffff } as there is
 // no known purpose for them.
 
-/*
-lighthouse_reports sanitize(const lighthouse_reports& S) {
-    return subset(S, !(S.timestamp == 0xffffffff & S.sensor_id == 0xff & S.length == 0xffff));
-}
-*/
-
 bool is_sample_valid(const vive_headset_lighthouse_pulse2& s) {
     return !(s.timestamp == 0xffffffff && s.sensor_id == 0xff && s.length == 0xffff);
 }
@@ -765,10 +763,6 @@ void write_light_groups_to_file(const std::string& title,
     }
     fid.close();
 }
-
-#include "opencv2/core.hpp"
-#include <opencv2/core/utility.hpp>
-#include <opencv2/calib3d.hpp>
 
 void vl_light_classify_samples(vl_lighthouse_samples *raw_light_samples) {
 
