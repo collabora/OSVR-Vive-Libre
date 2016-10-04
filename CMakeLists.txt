@@ -76,9 +76,9 @@ set(OSVR_PLUGIN_SOURCES
 osvr_add_plugin(org_osvr_Vive_Libre ${OSVR_PLUGIN_SOURCES})
 
 target_link_libraries(org_osvr_Vive_Libre
-    osvrPluginKit
-    osvrCommon
-    osvrUtil
+    osvr::osvrPluginKit
+    osvr::osvrCommon
+    osvr::osvrUtil
     ${HIDAPI_LIBRARIES}
     ${ZLIB_LIBRARIES})
 
