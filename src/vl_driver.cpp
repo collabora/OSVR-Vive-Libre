@@ -31,8 +31,6 @@
 #include "vl_math.h"
 #include "vl_log.h"
 
-static std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id);
-
 vl_driver::vl_driver() {
     hid_init();
     previous_ticks = 0;
@@ -48,19 +46,10 @@ vl_driver::~vl_driver() {
 }
 
 bool vl_driver::init_devices(unsigned index) {
-    // Probe for devices
-    std::vector<int> paths = vl_driver_get_device_paths(HTC_ID, VIVE_HMD);
-    if(paths.size() <= 0) {
-        vl_error("No connected VIVE found.");
-        return false;
-    }
-
-    if(index < paths.size()){
-        return this->open_devices(paths[index]);
-    } else {
-        vl_error("no device with index: %d", index);
-        return false;
-    }
+    bool success = open_devices(index);
+    if (!success)
+        vl_error("No connected Vive found (index %d).", index);
+    return success;
 }
 
 static void print_info_string(int (*fun)(hid_device*, wchar_t*, size_t), const char* what, hid_device* device)
@@ -181,25 +170,6 @@ bool vl_driver::open_devices(int idx)
     sensor_fusion = new vl_fusion();
 
     return true;
-}
-
-static std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id)
-{
-    struct hid_device_info* devs = hid_enumerate(vendor_id, device_id);
-    struct hid_device_info* cur_dev = devs;
-
-    std::vector<int> paths;
-
-    int idx = 0;
-    while (cur_dev) {
-        paths.push_back(idx);
-        cur_dev = cur_dev->next;
-        idx++;
-    }
-
-    hid_free_enumeration(devs);
-
-    return paths;
 }
 
 #define VL_GRAVITY_EARTH 9.81
