@@ -22,6 +22,7 @@
 #pragma once
 
 #include <Eigen/Geometry>
+#include "vl_log.h"
 
 static inline Eigen::Quaterniond switch_coord_order(const Eigen::Quaterniond& in) {
     Eigen::Quaterniond q(in.x(), in.y(), in.z(), in.w());
@@ -34,7 +35,7 @@ static inline Eigen::Quaterniond eigen_quaternion_inverse_handedness(const Eigen
 }
 
 static inline void print_eigen_quat(const char* label, const Eigen::Quaterniond& in) {
-    printf("%s: %f %f %f %f\n", label, in.w(), in.x(), in.y(), in.z());
+    vl_info("%s: %f %f %f %f", label, in.w(), in.x(), in.y(), in.z());
 }
 
 static inline double vector_get_angle(const Eigen::Vector3d& me, const Eigen::Vector3d& vec) {
