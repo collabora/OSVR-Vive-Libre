@@ -134,7 +134,7 @@ std::tuple<int,int,int> decode_pulse(const vl_lighthouse_samples& S) {
     //printf("found pulse class: duration %u skip %d sweep %d data %d\n",
     //       pulse.duration, pulse.skip, pulse.sweep, pulse.data);
 
-    return {pulse.skip, pulse.sweep, pulse.data};
+    return std::tuple<int,int,int>(pulse.skip, pulse.sweep, pulse.data);
 }
 
 
@@ -320,7 +320,9 @@ std::tuple<double, vl_light_sample_group, int, vl_light_sample_group> update_pul
         // sweep following sweep samples would belong in.
         current_sweep = vl_light_sample_group();
         // printf("Warning: returning incomplete pulse\n");
-        return {last_pulse_epoch, current_sweep, seq, out_pulse};
+
+        return std::tuple<double, vl_light_sample_group, int, vl_light_sample_group>(
+                    last_pulse_epoch, current_sweep, seq, out_pulse);
     }
 
     if (pulse.skip == 0) {
@@ -347,7 +349,8 @@ std::tuple<double, vl_light_sample_group, int, vl_light_sample_group> update_pul
         };
     }
 
-    return {last_pulse_epoch, current_sweep, seq, out_pulse};
+    return std::tuple<double, vl_light_sample_group, int, vl_light_sample_group>(
+                last_pulse_epoch, current_sweep, seq, out_pulse);
 }
 
 
@@ -622,7 +625,10 @@ std::tuple<std::vector<vl_light_sample_group>, std::vector<vl_light_sample_group
             }
         }
     }
-    return {sweeps, pulses};
+
+    return std::tuple<std::vector<vl_light_sample_group>, std::vector<vl_light_sample_group>> (sweeps, pulses);
+    // GCC 6
+    //return {sweeps, pulses};
 }
 
 void print_readings(const std::map<unsigned, vl_angles>& readings) {
