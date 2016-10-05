@@ -19,6 +19,8 @@
  * Boston, MA 02110-1335, USA.
  */
 
+#pragma once
+
 enum class Level : int {
     Debug,
     Info,
