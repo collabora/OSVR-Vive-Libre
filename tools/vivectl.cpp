@@ -5,6 +5,7 @@
 #include "vl_driver.h"
 #include "vl_config.h"
 #include "vl_light.h"
+#include "vl_log.h"
 
 vl_driver* driver;
 
@@ -32,7 +33,7 @@ static void send_hmd_on() {
     int hret = hid_send_feature_report(driver->hmd_device,
                                    vive_magic_power_on,
                                    sizeof(vive_magic_power_on));
-    printf("power on magic: %d\n", hret);
+    vl_info("power on magic: %d", hret);
 }
 
 static void dump_hmd_light() {
@@ -44,7 +45,7 @@ static void dump_hmd_light() {
 
 static void dump_config_hmd() {
     char * config = vl_get_config(driver->hmd_imu_device);
-    printf("hmd_imu_device config: %s\n", config);
+    vl_info("hmd_imu_device config: %s", config);
 }
 
 
@@ -79,7 +80,7 @@ static vl_lighthouse_samples parse_csv_file(const std::string& file_path) {
     std::ifstream csv_stream(file_path);
 
     if (!csv_stream.good()) {
-        printf("CSV file not found: %s\n", file_path.c_str());
+        vl_error("CSV file not found: %s", file_path.c_str());
         return samples;
     }
 
@@ -102,11 +103,11 @@ static vl_lighthouse_samples parse_csv_file(const std::string& file_path) {
 
         samples.push_back(sample);
 
-        //printf("int ts %u id %u length %u\n", sample.timestamp, sample.sensor_id, sample.length);
+        //vl_debug("int ts %u id %u length %u", sample.timestamp, sample.sensor_id, sample.length);
     }
 
     if (samples.empty())
-        printf("No samples found in %s\n", file_path.c_str());
+        vl_error("No samples found in %s", file_path.c_str());
 
     return samples;
 
@@ -126,7 +127,7 @@ static void pnp_from_csv(const std::string& file_path) {
 
     std::string config(vl_get_config(driver->hmd_imu_device));
 
-    //printf("\n\nconfig:\n\n%s\n\n", config.c_str());
+    //vl_info("\n\nconfig:\n\n%s\n\n", config.c_str());
 
     std::stringstream foo;
     foo << config;
@@ -144,12 +145,12 @@ static void pnp_from_csv(const std::string& file_path) {
     }
 
     std::string my_encoding = root.get("mb_serial_number", "UTF-32" ).asString();
-    printf("mb_serial_number: %s\n", my_encoding.c_str());
+    vl_info("mb_serial_number: %s", my_encoding.c_str());
 
 
     Json::Value modelPoints = root["lighthouse_config"]["modelPoints"];
 
-    printf("model points size: %u\n", modelPoints.size());
+    vl_info("model points size: %u", modelPoints.size());
 
     unsigned sensor_id = 0;
 
@@ -161,7 +162,7 @@ static void pnp_from_csv(const std::string& file_path) {
 
        Json::Value point = modelPoints[index];
 
-       printf("%d: x %s y %s z %s\n", sensor_id, point[0].asString().c_str(), point[1].asString().c_str(), point[2].asString().c_str());
+       vl_info("%d: x %s y %s z %s", sensor_id, point[0].asString().c_str(), point[1].asString().c_str(), point[2].asString().c_str());
 
        cv::Point3f p = cv::Point3f(
                std::stod(point[0].asString()),
@@ -185,12 +186,12 @@ static void send_hmd_off() {
     int hret = hid_send_feature_report(driver->hmd_device,
                                    vive_magic_power_off1,
                                    sizeof(vive_magic_power_off1));
-    printf("power off magic 1: %d\n", hret);
+    vl_debug("power off magic 1: %d", hret);
 
     hret = hid_send_feature_report(driver->hmd_device,
                                    vive_magic_power_off2,
                                    sizeof(vive_magic_power_off2));
-    printf("power off magic 2: %d\n", hret);
+    vl_debug("power off magic 2: %d", hret);
 }
 
 static void send_controller_off() {
@@ -251,13 +252,13 @@ usage: vivectl <command> <message>\n\n\
 %s\n\
  send\n\n\
 %s\n\
-Example: vivectl dump hmd-imu\n"
+Example: vivectl dump hmd-imu"
 
-    printf(USAGE, dmp_cmd_str.c_str(), snd_cmd_str.c_str());
+    vl_info(USAGE, dmp_cmd_str.c_str(), snd_cmd_str.c_str());
 }
 
 static void argument_error(const char * arg) {
-    printf("Unknown argument %s\n", arg);
+    vl_error("Unknown argument %s", arg);
     print_usage();
 }
 
