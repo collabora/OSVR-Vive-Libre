@@ -12,6 +12,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <hidapi.h>
+
 #include "vl_config.h"
 #include "vl_hidraw.h"
 #include "vl_log.h"
@@ -19,8 +21,9 @@
 /*
  * Downloads configuration data stored in the Vive headset and controller.
  */
-char *vl_get_config(hid_device *dev)
+char *vl_get_config(vl_device& device)
 {
+    hid_device* dev = device.handle;
     unsigned char buf[64];
     unsigned char *config_json;
     void *config_z;

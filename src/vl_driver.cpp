@@ -40,10 +40,10 @@ vl_driver::vl_driver() {
 
 vl_driver::~vl_driver() {
     delete(sensor_fusion);
-    hid_close(hmd_device);
-    hid_close(hmd_imu_device);
-    hid_close(watchman_dongle_device);
-    hid_close(hmd_light_sensor_device);
+    hid_close(hmd_device.handle);
+    hid_close(hmd_imu_device.handle);
+    hid_close(watchman_dongle_device.handle);
+    hid_close(hmd_light_sensor_device.handle);
     hid_exit();
 }
 
@@ -100,7 +100,7 @@ static char* _hid_to_unix_path(char* path)
 }
 
 
-static hid_device* open_device_idx(int manufacturer, int product, int iface, int iface_tot, int device_index)
+static bool open_device_idx(vl_device& device, int manufacturer, int product, int iface, int iface_tot, int device_index)
 {
     struct hid_device_info* devs = hid_enumerate(manufacturer, product);
     struct hid_device_info* cur_dev = devs;
@@ -111,7 +111,7 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
 
     if (!devs) {
         vl_error("No hid devices found.");
-        return NULL;
+        return false;
     }
 
     // vl_debug("Opening %04x:%04x %d/%d", manufacturer, product, iface+1, iface_tot);
@@ -126,7 +126,7 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
                 vl_warn("Try: sudo chmod 666 %s", path);
                 free(path);
                 hid_free_enumeration(devs);
-                return NULL;
+                return false;
             }
 
         }
@@ -141,37 +141,38 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
 
     if (!ret) {
         vl_error("Couldn’t find device %04d:%04d interface %d, check that it is plugged in.", manufacturer, product, iface);
-        return NULL;
+        return false;
     }
 
     if(hid_set_nonblocking(ret, 1) == -1){
         vl_error("failed to set non-blocking on device.");
-        return NULL;
+        return false;
     }
 
     // print_device_info(ret);
 
-    return ret;
+    device.handle = ret;
+    return true;
 }
 
 bool vl_driver::open_devices(int idx)
 {
     // Open the HMD device
-    hmd_device = open_device_idx(HTC_ID, VIVE_HMD, 0, 1, idx);
-    if(!hmd_device)
+    bool success = open_device_idx(hmd_device, HTC_ID, VIVE_HMD, 0, 1, idx);
+    if (!success)
         return false;
 
     // Open the lighthouse device
-    hmd_imu_device = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 0, 2, idx);
-    if(!hmd_imu_device)
+    success = open_device_idx(hmd_imu_device, VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 0, 2, idx);
+    if (!success)
         return false;
 
-    hmd_light_sensor_device = open_device_idx(VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 1, 2, idx);
-    if(!hmd_light_sensor_device)
+    success = open_device_idx(hmd_light_sensor_device, VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, 1, 2, idx);
+    if (!success)
         return false;
 
-    watchman_dongle_device = open_device_idx(VALVE_ID, VIVE_WATCHMAN_DONGLE, 1, 2, idx);
-    if(!watchman_dongle_device)
+    success = open_device_idx(watchman_dongle_device, VALVE_ID, VIVE_WATCHMAN_DONGLE, 1, 2, idx);
+    if (!success)
         return false;
 
     //hret = hid_send_feature_report(drv->hmd_device, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
@@ -248,16 +249,16 @@ void _log_hmd_light(unsigned char *buffer, int size) {
     }
 }
 
-void vl_driver_log_watchman(hid_device *dev) {
-    hid_query(dev, &_log_watchman);
+void vl_driver_log_watchman(vl_device& dev) {
+    hid_query(dev.handle, &_log_watchman);
 }
 
-void vl_driver_log_hmd_imu(hid_device* dev) {
-    hid_query(dev, &_log_hmd_imu);
+void vl_driver_log_hmd_imu(vl_device& dev) {
+    hid_query(dev.handle, &_log_hmd_imu);
 }
 
-void vl_driver_log_hmd_light(hid_device* dev) {
-    hid_query(dev, &_log_hmd_light);
+void vl_driver_log_hmd_light(vl_device& dev) {
+    hid_query(dev.handle, &_log_hmd_light);
 }
 
 static bool is_timestamp_valid(uint32_t t1, uint32_t t2) {
@@ -309,5 +310,5 @@ void vl_driver::update_pose() {
             this->_update_pose(pkt);
         }
     };
-    hid_query(hmd_imu_device, update_pose_fun);
+    hid_query(hmd_imu_device.handle, update_pose_fun);
 }

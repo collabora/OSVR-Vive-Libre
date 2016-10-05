@@ -30,7 +30,7 @@ static void dump_hmd_imu_pose() {
 
 static void send_hmd_on() {
     // turn the display on
-    int hret = hid_send_feature_report(driver->hmd_device,
+    int hret = hid_send_feature_report(driver->hmd_device.handle,
                                    vive_magic_power_on,
                                    sizeof(vive_magic_power_on));
     vl_info("power on magic: %d", hret);
@@ -68,7 +68,7 @@ static void dump_station_angle() {
     };
 
     while(raw_light_samples->size() < 10000)
-        hid_query(driver->hmd_light_sensor_device, read_hmd_light);
+        hid_query(driver->hmd_light_sensor_device.handle, read_hmd_light);
 
     vl_light_classify_samples(raw_light_samples);
 }
@@ -183,19 +183,19 @@ static void pnp_from_csv(const std::string& file_path) {
 
 static void send_hmd_off() {
     // turn the display off
-    int hret = hid_send_feature_report(driver->hmd_device,
+    int hret = hid_send_feature_report(driver->hmd_device.handle,
                                    vive_magic_power_off1,
                                    sizeof(vive_magic_power_off1));
     vl_debug("power off magic 1: %d", hret);
 
-    hret = hid_send_feature_report(driver->hmd_device,
+    hret = hid_send_feature_report(driver->hmd_device.handle,
                                    vive_magic_power_off2,
                                    sizeof(vive_magic_power_off2));
     vl_debug("power off magic 2: %d", hret);
 }
 
 static void send_controller_off() {
-    hid_send_feature_report(driver->watchman_dongle_device,
+    hid_send_feature_report(driver->watchman_dongle_device.handle,
                             vive_controller_power_off,
                             sizeof(vive_controller_power_off));
 }

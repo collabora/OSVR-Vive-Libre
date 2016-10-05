@@ -6,6 +6,6 @@
 
 #pragma once
 
-#include <hidapi.h>
+#include "vl_driver.h"
 
-char *vl_get_config(hid_device *dev);
+char *vl_get_config(vl_device& device);

@@ -45,12 +45,16 @@
 
 #define FREQ_48MHZ 1.0f / 48000000.0f
 
+struct vl_device {
+    hid_device* handle = nullptr;
+};
+
 class vl_driver {
     public:
-    hid_device* hmd_device;
-    hid_device* hmd_imu_device;
-    hid_device* watchman_dongle_device;
-    hid_device* hmd_light_sensor_device;
+    vl_device hmd_device;
+    vl_device hmd_imu_device;
+    vl_device watchman_dongle_device;
+    vl_device hmd_light_sensor_device;
     uint32_t previous_ticks;
     vl_fusion *sensor_fusion;
 
@@ -77,6 +81,6 @@ static inline void hid_query(hid_device* dev, query_fun fun) {
         vl_warn("error reading from device");
 }
 
-void vl_driver_log_watchman(hid_device *dev);
-void vl_driver_log_hmd_light(hid_device *dev);
-void vl_driver_log_hmd_imu(hid_device* dev);
+void vl_driver_log_watchman(vl_device& dev);
+void vl_driver_log_hmd_light(vl_device& dev);
+void vl_driver_log_hmd_imu(vl_device& dev);
