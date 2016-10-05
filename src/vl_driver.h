@@ -31,6 +31,7 @@
 #include "vl_magic.h"
 #include "vl_fusion.h"
 #include "vl_messages.h"
+#include "vl_log.h"
 
 #define FEATURE_BUFFER_SIZE 256
 
@@ -73,7 +74,7 @@ static inline void hid_query(hid_device* dev, query_fun fun) {
         fun(buffer, size);
 
     if(size < 0)
-        printf("error reading from device\n");
+        vl_warn("error reading from device");
 }
 
 void vl_driver_log_watchman(hid_device *dev);

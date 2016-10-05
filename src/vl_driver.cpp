@@ -29,10 +29,7 @@
 
 #include "vl_driver.h"
 #include "vl_math.h"
-
-void vl_error(const char* msg) {
-    printf("error: %s\n", msg);
-}
+#include "vl_log.h"
 
 static std::vector<int> vl_driver_get_device_paths(int vendor_id, int device_id);
 
@@ -54,14 +51,14 @@ bool vl_driver::init_devices(unsigned index) {
     // Probe for devices
     std::vector<int> paths = vl_driver_get_device_paths(HTC_ID, VIVE_HMD);
     if(paths.size() <= 0) {
-        fprintf(stderr, "No connected VIVE found.\n");
+        vl_error("No connected VIVE found.");
         return false;
     }
 
     if(index < paths.size()){
         return this->open_devices(paths[index]);
     } else {
-        printf("no device with index: %d\n", index);
+        vl_error("no device with index: %d", index);
         return false;
     }
 }
@@ -75,7 +72,7 @@ static void print_info_string(int (*fun)(hid_device*, wchar_t*, size_t), const c
 
     if(hret == 0){
         wcstombs(buffer, wbuffer, sizeof(buffer));
-        printf("%s: '%s'\n", what, buffer);
+        vl_info("%s: '%s'\n", what, buffer);
     }
 }
 
@@ -117,7 +114,7 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
         return NULL;
     }
 
-    // printf("Opening %04x:%04x %d/%d\n", manufacturer, product, iface+1, iface_tot);
+    // vl_debug("Opening %04x:%04x %d/%d", manufacturer, product, iface+1, iface_tot);
 
     while (cur_dev) {
         if(idx == device_index && iface == iface_cur) {
@@ -125,7 +122,8 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
 
             if (ret == NULL) {
                 char* path = _hid_to_unix_path(cur_dev->path);
-                printf("Opening failed. Is another driver running? Do you have the correct udev rules in place?\nTry: sudo chmod 666 %s\n", path);
+                vl_warn("Opening failed. Is another driver running? Do you have the correct udev rules in place?");
+                vl_warn("Try: sudo chmod 666 %s", path);
                 free(path);
                 hid_free_enumeration(devs);
                 return NULL;
@@ -142,7 +140,7 @@ static hid_device* open_device_idx(int manufacturer, int product, int iface, int
     hid_free_enumeration(devs);
 
     if (!ret) {
-        fprintf(stderr, "Couldn’t find device %04d:%04d interface %d, check that it is plugged in.", manufacturer, product, iface);
+        vl_error("Couldn’t find device %04d:%04d interface %d, check that it is plugged in.", manufacturer, product, iface);
         return NULL;
     }
 
@@ -177,7 +175,7 @@ bool vl_driver::open_devices(int idx)
         return false;
 
     //hret = hid_send_feature_report(drv->hmd_device, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
-    //printf("enable lighthouse magic: %d\n", hret);
+    //vl_debug("enable lighthouse magic: %d\n", hret);
 
     sensor_fusion = new vl_fusion();
 
