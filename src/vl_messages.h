@@ -28,6 +28,7 @@
 
 #include <stdint.h>
 #include "vl_hid_reports.h"
+#include "vl_log.h"
 
 typedef enum
 {
@@ -72,7 +73,7 @@ inline static uint32_t uread32(const unsigned char** buffer)
 inline static bool vl_msg_decode_hmd_imu(vive_headset_imu_report* pkt, const unsigned char* buffer, int size)
 {
     if(size != 52){
-        printf("invalid vive sensor packet size (expected 52 but got %d)\n", size);
+        vl_error("invalid vive sensor packet size (expected 52 but got %d)", size);
         return false;
     }
 
@@ -93,29 +94,29 @@ inline static bool vl_msg_decode_hmd_imu(vive_headset_imu_report* pkt, const uns
 }
 
 inline static void vl_msg_print_hmd_imu(vive_headset_imu_report* pkt) {
-    printf("== imu sample ==\n");
-    printf("  report_id: %u\n", pkt->report_id);
+    vl_info("== imu sample ==");
+    vl_info("  report_id: %u", pkt->report_id);
     for(int i = 0; i < 3; i++){
-        printf("    sample[%d]:\n", i);
+        vl_info("    sample[%d]:", i);
 
         for(int j = 0; j < 3; j++){
-            printf("      acc[%d]: %d\n", j, pkt->samples[i].acc[j]);
+            vl_info("      acc[%d]: %d", j, pkt->samples[i].acc[j]);
         }
 
         for(int j = 0; j < 3; j++){
-            printf("      rot[%d]: %d\n", j, pkt->samples[i].rot[j]);
+            vl_info("      rot[%d]: %d", j, pkt->samples[i].rot[j]);
         }
 
-        printf("time_ticks: %u\n", pkt->samples[i].time_ticks);
-        printf("seq: %u\n", pkt->samples[i].seq);
-        printf("\n");
+        vl_info("time_ticks: %u", pkt->samples[i].time_ticks);
+        vl_info("seq: %u", pkt->samples[i].seq);
+        vl_info("");
     }
 }
 
 inline static bool vl_msg_decode_hmd_light(vive_headset_lighthouse_pulse_report2* pkt, const unsigned char* buffer, int size)
 {
     if(size != 64){
-        printf("invalid vive sensor packet size (expected 64 but got %d)\n", size);
+        vl_error("invalid vive sensor packet size (expected 64 but got %d)", size);
         return false;
     }
 
@@ -131,28 +132,28 @@ inline static bool vl_msg_decode_hmd_light(vive_headset_lighthouse_pulse_report2
 }
 
 inline static void vl_msg_print_hmd_light(vive_headset_lighthouse_pulse_report2* pkt) {
-    printf("== controller light sample ==\n");
-    printf("  report_id: %u\n", pkt->report_id);
+    vl_info("== controller light sample ==");
+    vl_info("  report_id: %u", pkt->report_id);
     for(int i = 0; i < 9; i++){
         if (pkt->samples[i].timestamp == UINT32_MAX)
             continue;
-        printf("     sensor_id[%d]: %u\n", i, pkt->samples[i].sensor_id);
-        printf("      length[%d]: %d\n", i, pkt->samples[i].length);
-        printf("      time[%d]: %u\n", i, pkt->samples[i].timestamp);
-        printf("\n");
+        vl_info("     sensor_id[%d]: %u", i, pkt->samples[i].sensor_id);
+        vl_info("      length[%d]: %d", i, pkt->samples[i].length);
+        vl_info("      time[%d]: %u", i, pkt->samples[i].timestamp);
+        vl_info("");
     }
 }
 
 inline static void vl_msg_print_hmd_light_csv(vive_headset_lighthouse_pulse_report2* pkt) {
     for(int i = 0; i < 9; i++){
-        printf("%u, %u, %d\n", pkt->samples[i].timestamp, pkt->samples[i].sensor_id, pkt->samples[i].length);
+        vl_info("%u, %u, %d", pkt->samples[i].timestamp, pkt->samples[i].sensor_id, pkt->samples[i].length);
     }
 }
 
 inline static bool vl_msg_decode_controller_light(vive_headset_lighthouse_pulse_report1* pkt, const unsigned char* buffer, int size)
 {
     if(size != 58){
-        printf("invalid vive sensor packet size (expected 58 but got %d)\n", size);
+        vl_error("invalid vive sensor packet size (expected 58 but got %d)", size);
         return false;
     }
 
@@ -167,7 +168,7 @@ inline static bool vl_msg_decode_controller_light(vive_headset_lighthouse_pulse_
     pkt->padding = read8(&buffer);
 
     if (pkt->padding != 0) {
-        fprintf(stderr, "Wrong padding data (expected 0 but got %d)\n", pkt->padding);
+        vl_error(stderr, "Wrong padding data (expected 0 but got %d)", pkt->padding);
         return false;
     }
 
@@ -175,9 +176,9 @@ inline static bool vl_msg_decode_controller_light(vive_headset_lighthouse_pulse_
 }
 
 inline static void vl_msg_print_controller_light(vive_headset_lighthouse_pulse_report1* pkt) {
-    printf("== hmd light sample ==\n");
-    printf("  report_id: %u\n", pkt->report_id);
-    printf("        num | id | type | length | time\n");
+    vl_info("== hmd light sample ==");
+    vl_info("  report_id: %u", pkt->report_id);
+    vl_info("        num | id | type | length | time");
     for(int i = 0; i < 7; i++){
 
         if (pkt->samples[i].type == 0xff)
@@ -186,24 +187,24 @@ inline static void vl_msg_print_controller_light(vive_headset_lighthouse_pulse_r
 
         // TODO: identify what these two types mean, and why they are different.
         if (pkt->samples[i].type != 0x00 && pkt->samples[i].type != 0xfe) {
-            fprintf(stderr, "Unknown sensor type %d\n", pkt->samples[i].type);
+            fvl_info(stderr, "Unknown sensor type %d", pkt->samples[i].type);
             continue;
         }
 
-        printf("          %d | %02hhu |  %02hhu  | % 6d | %u\n",
+        vl_info("          %d | %02hhu |  %02hhu  | % 6d | %u",
                i,
                pkt->samples[i].sensor_id,
                pkt->samples[i].type,
                pkt->samples[i].length,
                pkt->samples[i].time);
     }
-    printf("padding: %u\n", pkt->padding);
+    vl_info("padding: %u", pkt->padding);
 }
 
 inline static bool vl_msg_decode_watchman(vive_controller_report1* pkt, const unsigned char* buffer, int size)
 {
     if(size != 30){
-        printf("invalid vive sensor packet size (expected 30 but got %d)\n", size);
+        vl_error("invalid vive sensor packet size (expected 30 but got %d)", size);
         return false;
     }
 
@@ -219,16 +220,16 @@ inline static bool vl_msg_decode_watchman(vive_controller_report1* pkt, const un
 
 inline static void vl_msg_print_watchman(vive_controller_report1 * pkt) {
     /*
-    printf("vive watchman sample:\n");
-    printf("  report_id: %u\n", pkt->report_id);
-    printf("  time1: %u\n", pkt->time1);
-    printf("  type1: %u\n", pkt->type1);
-    printf("  time2: %u\n", pkt->time2);
-    printf("  type2: %d\n", pkt->type2);
+    vl_info("vive watchman sample:");
+    vl_info("  report_id: %u", pkt->report_id);
+    vl_info("  time1: %u", pkt->time1);
+    vl_info("  type1: %u", pkt->type1);
+    vl_info("  time2: %u", pkt->time2);
+    vl_info("  type2: %d", pkt->type2);
     */
 
     vive_controller_message* msg = &pkt->message;
-    printf("type %d %d buttons\n", msg->type1, msg->type2);
+    vl_info("type %d %d buttons", msg->type1, msg->type2);
 }
 
 
@@ -237,6 +238,6 @@ vive_controller_command_packet controller_command;
 controller_command.report_id = 255;
 controller_command.command = 0x8f;
 controller_command.length = 7;
-printf("vive_controller_haptic_pulse: %d\n", hret);
+vl_info("vive_controller_haptic_pulse: %d", hret);
 */
 
