@@ -168,7 +168,7 @@ inline static bool vl_msg_decode_controller_light(vive_headset_lighthouse_pulse_
     pkt->padding = read8(&buffer);
 
     if (pkt->padding != 0) {
-        vl_error(stderr, "Wrong padding data (expected 0 but got %d)", pkt->padding);
+        vl_error("Wrong padding data (expected 0 but got %d)", pkt->padding);
         return false;
     }
 
@@ -187,7 +187,7 @@ inline static void vl_msg_print_controller_light(vive_headset_lighthouse_pulse_r
 
         // TODO: identify what these two types mean, and why they are different.
         if (pkt->samples[i].type != 0x00 && pkt->samples[i].type != 0xfe) {
-            fvl_info(stderr, "Unknown sensor type %d", pkt->samples[i].type);
+            vl_info("Unknown sensor type %d", pkt->samples[i].type);
             continue;
         }
 
