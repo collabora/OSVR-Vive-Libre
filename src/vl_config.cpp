@@ -14,6 +14,7 @@
 
 #include "vl_config.h"
 #include "vl_hidraw.h"
+#include "vl_log.h"
 
 /*
  * Downloads configuration data stored in the Vive headset and controller.
@@ -30,7 +31,7 @@ char *vl_get_config(hid_device *dev)
     buf[0] = 0x10;
     ret = hid_get_feature_report_timeout(dev, buf, sizeof(buf), 100);
     if (ret < 0) {
-        printf("%s: Read error 0x10: %d\n", "devname", errno);
+        vl_error("%s: Read error 0x10: %d\n", "devname", errno);
         return NULL;
     }
 
@@ -40,22 +41,22 @@ char *vl_get_config(hid_device *dev)
     do {
         ret = hid_get_feature_report_timeout(dev, buf, sizeof(buf), 100);
         if (ret < 0) {
-            printf("%s: Read error after %d bytes: %d\n",
-                   "devname", count, errno);
+            vl_error("%s: Read error after %d bytes: %d\n",
+                     "devname", count, errno);
             free(config_z);
             return NULL;
         }
 
         if (buf[1] > 62) {
-            printf("%s: Invalid configuration data at %d\n",
-                   "devname", count);
+            vl_error("%s: Invalid configuration data at %d\n",
+                     "devname", count);
             free(config_z);
             return NULL;
         }
 
         if (count + buf[1] > 4096) {
-            printf("%s: Configuration data too large\n",
-                   "devname");
+            vl_error("%s: Configuration data too large\n",
+                     "devname");
             free(config_z);
             return NULL;
         }
@@ -64,7 +65,7 @@ char *vl_get_config(hid_device *dev)
         count += buf[1];
     } while (buf[1]);
 
-    printf("%s: Read configuration data: %d bytes\n", "devname", count);
+    vl_debug("%s: Read configuration data: %d bytes\n", "devname", count);
 
     strm.zalloc = Z_NULL;
     strm.zfree = Z_NULL;
@@ -73,7 +74,7 @@ char *vl_get_config(hid_device *dev)
     strm.next_in = Z_NULL;
     ret = inflateInit(&strm);
     if (ret != Z_OK) {
-        printf("inflate_init failed: %d\n", ret);
+        vl_error("inflate_init failed: %d\n", ret);
         free(config_z);
         return NULL;
     }
@@ -88,14 +89,14 @@ char *vl_get_config(hid_device *dev)
     ret = inflate(&strm, Z_FINISH);
     free(config_z);
     if (ret != Z_STREAM_END) {
-        printf("%s: Failed to inflate configuration data: %d\n",
-            "devname", ret);
+        vl_error("%s: Failed to inflate configuration data: %d\n",
+                 "devname", ret);
         free(config_json);
         return NULL;
     }
 
-    printf("%s: Inflated configuration data: %lu bytes\n",
-           "devname", strm.total_out);
+    vl_error("%s: Inflated configuration data: %lu bytes\n",
+             "devname", strm.total_out);
 
     config_json[strm.total_out] = '\0';
 
