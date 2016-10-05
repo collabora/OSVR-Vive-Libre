@@ -13,6 +13,7 @@
 #include <opencv2/calib3d.hpp>
 
 #include "vl_messages.h"
+#include "vl_log.h"
 
 #define VL_ROTOR_RPS 60 // 60 rps
 #define VL_TICK_RATE 48e6 // 48 Mhz
@@ -60,7 +61,7 @@ int64_t median_length(const vl_lighthouse_samples& samples) {
 }
 
 void print_sample_group (const vl_light_sample_group& g) {
-    printf("channel %c (len %ld, samples %zu): skip %d, sweep %c epoch %f\n",
+    vl_info("channel %c (len %ld, samples %zu): skip %d, sweep %c epoch %f",
         g.channel, median_length(g.samples), g.samples.size(), g.skip, g.sweep, g.epoch);
 }
 
@@ -99,7 +100,7 @@ lighthouse_sync_pulse lookup_pulse_class(uint16_t pulselen) {
         if (pulselen > (pulse_table[i].duration - 250) &&
                 pulselen < (pulse_table[i].duration + 250))
             return pulse_table[i];
-    printf("error: no pulse class found for length %u\n", pulselen);
+    vl_error("no pulse class found for length %u", pulselen);
     return lighthouse_sync_pulse();
 }
 
@@ -124,15 +125,15 @@ std::tuple<int,int,int> decode_pulse(const vl_lighthouse_samples& S) {
 
     // not fatal
     if (ndups != 0)
-        printf("%d duplicate sensors\n", ndups);
+        vl_warn("Warning: %d duplicate sensors", ndups);
 
     // robust against outlier samples
     uint16_t pulselen = median_length(S);
 
     lighthouse_sync_pulse pulse = lookup_pulse_class(pulselen);
 
-    //printf("found pulse class: duration %u skip %d sweep %d data %d\n",
-    //       pulse.duration, pulse.skip, pulse.sweep, pulse.data);
+    //vl_debug("found pulse class: duration %u skip %d sweep %d data %d",
+    //         pulse.duration, pulse.skip, pulse.sweep, pulse.data);
 
     return std::tuple<int,int,int>(pulse.skip, pulse.sweep, pulse.data);
 }
@@ -167,7 +168,7 @@ char channel_detect(uint32_t last_pulse_time, double new_pulse_time) {
         ch = 'C';
     else
         ch = 'e';
-    //printf("last %u new %ld channel %c\n", last_pulse_time, new_pulse_time, ch);
+    //vl_debug("last %u new %ld channel %c", last_pulse_time, new_pulse_time, ch);
     return ch;
 }
 
@@ -260,7 +261,7 @@ vl_light_sample_group process_pulse_set(const vl_lighthouse_samples& S, int64_t 
     char sweep = key[sweepi + 1];
 
     if (S.size() < 5)
-        printf("Warning: channel %c pulse at %.1f (len %ld, samples %zu): skip %d, sweep %c, data %d\n",
+        vl_warn("Warning: channel %c pulse at %.1f (len %ld, samples %zu): skip %d, sweep %c, data %d\n",
             ch, t, median_length(S), S.size(), skip, sweep, databit);
 
     // no use for databit here
@@ -319,7 +320,7 @@ std::tuple<double, vl_light_sample_group, int, vl_light_sample_group> update_pul
         // Invalid pulse, reset state since cannot know which
         // sweep following sweep samples would belong in.
         current_sweep = vl_light_sample_group();
-        // printf("Warning: returning incomplete pulse\n");
+        // vl_warn("Warning: returning incomplete pulse");
 
         return std::tuple<double, vl_light_sample_group, int, vl_light_sample_group>(
                     last_pulse_epoch, current_sweep, seq, out_pulse);
@@ -333,8 +334,8 @@ std::tuple<double, vl_light_sample_group, int, vl_light_sample_group> update_pul
         if ((pulse.channel == 'A' || pulse.channel == 'B') && pulse.sweep == 'H')
             seq += 1;
 
-        printf("Start sweep seq %d: ch %c, sweep %c, pulse detected by %zu sensors\n",
-               seq, pulse.channel, pulse.sweep, pulse_samples.size());
+        vl_info("Start sweep seq %d: ch %c, sweep %c, pulse detected by %zu sensors",
+                seq, pulse.channel, pulse.sweep, pulse_samples.size());
 
         current_sweep = pulse;
         current_sweep.samples = pulse_samples;
@@ -412,12 +413,12 @@ std::map<unsigned, vl_angles> collect_readings(char station, const std::vector<v
 
         if (x_sweeps.size() < 1 || y_sweeps.size() < 1) {
             // Either or both sweeps are empty, ignore.
-            printf("Warning: Either or both sweeps are empty, ignore.\n");
+            vl_warn("Warning: Either or both sweeps are empty, ignore.");
             break;
         }
 
         if (x_sweeps.size() != 1 || y_sweeps.size() != 1)
-            printf("error: Unexpected number of indices [%zu %zu], should be just one each\n", x_sweeps.size(), y_sweeps.size());
+            vl_error("error: Unexpected number of indices [%zu %zu], should be just one each", x_sweeps.size(), y_sweeps.size());
 
 
         for (unsigned sweep_i = 0; sweep_i < x_sweeps.size(); sweep_i++) {
@@ -428,7 +429,7 @@ std::map<unsigned, vl_angles> collect_readings(char station, const std::vector<v
                 x_sweep = x_sweeps.at(sweep_i);
                 y_sweep = y_sweeps.at(sweep_i);
             } catch (std::out_of_range e) {
-                printf("Warning: one dimension is missing for sweep %u\n", sweep_i);
+                vl_warn("Warning: one dimension is missing for sweep %u", sweep_i);
                 continue;
             }
 
@@ -440,7 +441,7 @@ std::map<unsigned, vl_angles> collect_readings(char station, const std::vector<v
                 vl_lighthouse_samples yi = filter_samples_by_sensor_id(y_sweep.samples, s);
 
                 if (xi.size() > 1 || yi.size() > 1)
-                    printf("error: Same sensor sampled multiple times??\n");
+                    vl_error("error: Same sensor sampled multiple times??");
 
                 if (xi.size() < 1 || yi.size() < 1)
                     continue;
@@ -557,15 +558,15 @@ std::tuple<std::vector<vl_light_sample_group>, std::vector<vl_light_sample_group
                 pulse_inds.clear();
                 pulse_range = {UINT32_MAX, 0};
                 if (!isempty(pulse)) {
-                    //printf("pushing pulse 1\n");
+                    //vl_debug("pushing pulse 1");
                     pulses.push_back(pulse);
                 } else {
-                    //printf("error: sweep has begun but pulse is empty.\n");
+                    //vl_error("error: sweep has begun but pulse is empty.");
                 }
             }
 
             if (isempty(current_sweep)) {
-                // printf("warning: current_sweep is empty.\n");
+                // vl_warn("warning: current_sweep is empty.");
                 // do not know which sweep, so skip
                 continue;
             }
@@ -591,7 +592,7 @@ std::tuple<std::vector<vl_light_sample_group>, std::vector<vl_light_sample_group
                 if (!isempty(current_sweep)) {
                     sweeps.push_back(sweep);
                 } else {
-                    printf("error: pulse has begun but current_sweep is empty.\n");
+                    vl_error("error: pulse has begun but current_sweep is empty.");
                 }
             }
 
@@ -611,7 +612,7 @@ std::tuple<std::vector<vl_light_sample_group>, std::vector<vl_light_sample_group
                 // the previous one without any sweep samples in between.
 
                 if (sample.timestamp + sample.length < pulse_range.first)
-                    printf("Out of order pulse at index %d\n", i);
+                    vl_warn("Out of order pulse at index %d", i);
 
                 // process the pulse set
                 vl_light_sample_group pulse;
@@ -634,7 +635,7 @@ std::tuple<std::vector<vl_light_sample_group>, std::vector<vl_light_sample_group
 void print_readings(const std::map<unsigned, vl_angles>& readings) {
     for (auto angles : readings) {
         for (unsigned i = 0; i < angles.second.x.size(); i++ ) {
-            printf("sensor %u, x %u, y %u, t %u\n",
+            vl_info("sensor %u, x %u, y %u, t %u",
                    angles.first,
                    angles.second.x[i],
                    angles.second.y[i],
@@ -647,7 +648,7 @@ void write_readings_to_csv(const std::map<unsigned, vl_angles>& readings, const 
     std::ofstream csv_file;
     csv_file.open (file_name);
 
-    printf("Writing %s\n", file_name.c_str());
+    vl_info("Writing %s", file_name.c_str());
     for (auto angles : readings)
         for (unsigned i = 0; i < angles.second.x.size(); i++ )
             csv_file << angles.first << ","
@@ -753,7 +754,7 @@ void write_light_groups_to_file(const std::string& title,
                                 const std::vector<vl_light_sample_group>& pulses,
                                 const print_fun& fun) {
     std::ofstream fid;
-    printf("Writing %s.\n", file_name.c_str());
+    vl_info("Writing %s.", file_name.c_str());
     fid.open (file_name);
     fid << title << " struct [1 " << pulses.size() << "]:\n";
     for (unsigned i = 0; i < pulses.size(); i++) {
@@ -772,26 +773,26 @@ void vl_light_classify_samples(vl_lighthouse_samples *raw_light_samples) {
     // deliberately start middle of a sweep
     vl_lighthouse_samples sanitized_light_samples = filter_reports(*raw_light_samples, &is_sample_valid);
 
-    printf("raw: %ld\n", raw_light_samples->size());
-    printf("valid: %ld\n", sanitized_light_samples.size());
+    vl_info("raw: %ld", raw_light_samples->size());
+    vl_info("valid: %ld", sanitized_light_samples.size());
 
     std::vector<vl_light_sample_group> pulses;
     std::vector<vl_light_sample_group> sweeps;
     std::tie(sweeps, pulses) = process_lighthouse_samples(sanitized_light_samples);
 
-    printf("Found %zu pulses\n", pulses.size());
+    vl_info("Found %zu pulses", pulses.size());
     write_light_groups_to_file("Pulses", "b_c_still.pulses.cpp.txt", pulses, print_pulse);
 
-    printf("Found %zu sweeps\n", sweeps.size());
+    vl_info("Found %zu sweeps", sweeps.size());
     write_light_groups_to_file("Sweeps", "b_c_still.sweeps.cpp.txt", sweeps, print_sweep);
 
     std::map<unsigned, vl_angles> R_B = collect_readings('B', sweeps);
     std::map<unsigned, vl_angles> R_C = collect_readings('C', sweeps);
 
-    printf("Found %zu sensors with B angles\n", R_B.size());
+    vl_info("Found %zu sensors with B angles", R_B.size());
     // print_readings(R_B);
 
-    printf("Found %zu sensors with C angles\n", R_C.size());
+    vl_info("Found %zu sensors with C angles", R_C.size());
     // print_readings(R_C);
 
     if (R_B.size() > 0)
@@ -820,7 +821,7 @@ void dump_readings_to_csv(const std::string& file_name,
     std::ofstream csv_file;
     csv_file.open (file_name);
 
-    printf("Writing %u %s\n", sample_count, file_name.c_str());
+    vl_info("Writing %u %s", sample_count, file_name.c_str());
 
     for (unsigned i = 0; i < sample_count; i++) {
 
@@ -832,7 +833,7 @@ void dump_readings_to_csv(const std::string& file_name,
 
         if (!solvePnP(cv::Mat(configSensors), cv::Mat(foundSensors), cameraMatrix,
                  distCoeffs, rvec, tvec))
-            printf("error: PnP returned 0.\n");
+            vl_error("error: PnP returned 0.");
 
         csv_file << tvec.at<double>(0) << ","
                  << tvec.at<double>(1) << ","
