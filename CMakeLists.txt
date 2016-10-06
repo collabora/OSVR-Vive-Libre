@@ -45,7 +45,7 @@ include_directories(
 # Build the plugin
 osvr_convert_json(org_osvr_Vive_Libre_json
     config/org_osvr_Vive_Libre.json
-    "${CMAKE_CURRENT_SOURCE_DIR}/org_osvr_Vive_Libre_json.h")
+    "${CMAKE_BINARY_DIR}/org_osvr_Vive_Libre_json.h")
 
 set(SOURCES
     src/vl_hidraw.h
@@ -73,7 +73,7 @@ target_link_libraries(vive-libre
 set(OSVR_PLUGIN_SOURCES
     src/org_osvr_Vive_Libre.cpp
     ${SOURCES}
-    "${CMAKE_CURRENT_SOURCE_DIR}/org_osvr_Vive_Libre_json.h")
+    "${CMAKE_BINARY_DIR}/org_osvr_Vive_Libre_json.h")
 
 osvr_add_plugin(org_osvr_Vive_Libre ${OSVR_PLUGIN_SOURCES})
 
