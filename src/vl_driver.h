@@ -56,7 +56,7 @@ class vl_driver {
     vl_device watchman_dongle_device;
     vl_device hmd_light_sensor_device;
     uint32_t previous_ticks;
-    vl_fusion *sensor_fusion;
+    std::unique_ptr<vl_fusion> sensor_fusion;
 
 
     vl_driver();

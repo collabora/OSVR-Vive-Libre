@@ -37,7 +37,6 @@ vl_driver::vl_driver() {
 }
 
 vl_driver::~vl_driver() {
-    delete(sensor_fusion);
     hid_close(hmd_device.handle);
     hid_close(hmd_imu_device.handle);
     hid_close(watchman_dongle_device.handle);
@@ -167,7 +166,7 @@ bool vl_driver::open_devices(int idx)
     //hret = hid_send_feature_report(drv->hmd_device, vive_magic_enable_lighthouse, sizeof(vive_magic_enable_lighthouse));
     //vl_debug("enable lighthouse magic: %d\n", hret);
 
-    sensor_fusion = new vl_fusion();
+    sensor_fusion = std::make_unique<vl_fusion>();
 
     return true;
 }
