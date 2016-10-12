@@ -34,7 +34,7 @@ char *vl_get_config(vl_device& device)
     buf[0] = 0x10;
     ret = hid_get_feature_report_timeout(dev, buf, sizeof(buf), 100);
     if (ret < 0) {
-        vl_error("%s: Read error 0x10: %d\n", "devname", errno);
+        vl_error("%s: Read error 0x10: %d", "devname", errno);
         return NULL;
     }
 
@@ -44,21 +44,21 @@ char *vl_get_config(vl_device& device)
     do {
         ret = hid_get_feature_report_timeout(dev, buf, sizeof(buf), 100);
         if (ret < 0) {
-            vl_error("%s: Read error after %d bytes: %d\n",
+            vl_error("%s: Read error after %d bytes: %d",
                      "devname", count, errno);
             free(config_z);
             return NULL;
         }
 
         if (buf[1] > 62) {
-            vl_error("%s: Invalid configuration data at %d\n",
+            vl_error("%s: Invalid configuration data at %d",
                      "devname", count);
             free(config_z);
             return NULL;
         }
 
         if (count + buf[1] > 4096) {
-            vl_error("%s: Configuration data too large\n",
+            vl_error("%s: Configuration data too large",
                      "devname");
             free(config_z);
             return NULL;
@@ -68,7 +68,7 @@ char *vl_get_config(vl_device& device)
         count += buf[1];
     } while (buf[1]);
 
-    vl_debug("%s: Read configuration data: %d bytes\n", "devname", count);
+    vl_debug("%s: Read configuration data: %d bytes", "devname", count);
 
     strm.zalloc = Z_NULL;
     strm.zfree = Z_NULL;
@@ -92,13 +92,13 @@ char *vl_get_config(vl_device& device)
     ret = inflate(&strm, Z_FINISH);
     free(config_z);
     if (ret != Z_STREAM_END) {
-        vl_error("%s: Failed to inflate configuration data: %d\n",
+        vl_error("%s: Failed to inflate configuration data: %d",
                  "devname", ret);
         free(config_json);
         return NULL;
     }
 
-    vl_error("%s: Inflated configuration data: %lu bytes\n",
+    vl_error("%s: Inflated configuration data: %lu bytes",
              "devname", strm.total_out);
 
     config_json[strm.total_out] = '\0';
