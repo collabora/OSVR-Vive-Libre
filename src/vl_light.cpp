@@ -732,13 +732,13 @@ void write_light_groups_to_file(const std::string& title,
     fid.close();
 }
 
-void vl_light_classify_samples(vl_lighthouse_samples *raw_light_samples) {
+void vl_light_classify_samples(const vl_lighthouse_samples& raw_light_samples) {
 
     // Take just a little bit for analysis
     // deliberately start middle of a sweep
-    vl_lighthouse_samples sanitized_light_samples = filter_reports(*raw_light_samples, &is_sample_valid);
+    vl_lighthouse_samples sanitized_light_samples = filter_reports(raw_light_samples, &is_sample_valid);
 
-    vl_info("raw: %ld", raw_light_samples->size());
+    vl_info("raw: %ld", raw_light_samples.size());
     vl_info("valid: %ld", sanitized_light_samples.size());
 
     std::vector<vl_light_sample_group> pulses;

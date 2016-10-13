@@ -163,7 +163,7 @@ inline static bool vl_msg_decode_controller_light(vive_headset_lighthouse_pulse_
         pkt->samples[j].sensor_id = read8(&buffer);
         pkt->samples[j].type = read8(&buffer);
         pkt->samples[j].length = read16(&buffer);
-        pkt->samples[j].time = uread32(&buffer);
+        pkt->samples[j].timestamp = uread32(&buffer);
     }
     pkt->padding = read8(&buffer);
 
@@ -196,7 +196,7 @@ inline static void vl_msg_print_controller_light(vive_headset_lighthouse_pulse_r
                pkt->samples[i].sensor_id,
                pkt->samples[i].type,
                pkt->samples[i].length,
-               pkt->samples[i].time);
+               pkt->samples[i].timestamp);
     }
     vl_info("padding: %u", pkt->padding);
 }

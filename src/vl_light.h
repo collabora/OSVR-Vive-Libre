@@ -236,7 +236,7 @@ void write_light_groups_to_file(const std::string& title,
                                 const std::string& file_name,
                                 const std::vector<vl_light_sample_group>& pulses,
                                 const print_fun& fun);
-void vl_light_classify_samples(vl_lighthouse_samples *raw_light_samples);
+void vl_light_classify_samples(const vl_lighthouse_samples& raw_light_samples);
 void dump_readings_to_csv(const std::string& file_name,
                      const std::map<unsigned, vl_angles>& readings,
                      const std::map<unsigned, cv::Point3f>& config_sensor_positions);

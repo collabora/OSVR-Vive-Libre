@@ -100,7 +100,7 @@ struct vive_headset_lighthouse_pulse1 {
 	__u8 sensor_id;
 	__u8 type;
 	__le16 length;
-	__le32 time;
+	__le32 timestamp;
 } __attribute__((packed));
 
 struct vive_headset_lighthouse_pulse_report1 {

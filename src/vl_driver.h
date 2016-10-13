@@ -37,6 +37,7 @@
 #include "vl_magic.h"
 #include "vl_fusion.h"
 #include "vl_messages.h"
+#include "vl_light.h"
 #include "vl_log.h"
 
 #define FEATURE_BUFFER_SIZE 64
@@ -68,6 +69,7 @@ public:
     vl_device watchman_dongle_device;
     uint32_t previous_ticks;
     std::unique_ptr<vl_fusion> sensor_fusion;
+    vl_lighthouse_samples raw_light_samples = {};
 
 
     vl_driver();

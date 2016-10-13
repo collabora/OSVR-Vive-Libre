@@ -82,34 +82,38 @@ static void dump_hmd_all() {
     vl_driver_stop_hmd_mainboard_capture(driver);
 }
 
+static void read_hmd_light(uint8_t* buffer, int size, vl_driver* driver) {
+    if (buffer[0] != VL_MSG_HMD_LIGHT) {
+        vl_error("Wrong light message type, expected %d got %d.", VL_MSG_HMD_LIGHT, buffer[0]);
+        return;
+    }
 
+    vive_headset_lighthouse_pulse_report2 pkt;
+    vl_msg_decode_hmd_light(&pkt, buffer, size);
+    vl_msg_print_hmd_light_csv(&pkt);
+
+    for(int i = 0; i < 9; i++){
+        driver->raw_light_samples.push_back(pkt.samples[i]);
+    }
+}
 
 static void dump_station_angle() {
     send_hmd_on();
 
-    vl_lighthouse_samples * raw_light_samples = new vl_lighthouse_samples();
+    vl_driver_start_hmd_light_capture(driver, read_hmd_light);
+    while (driver->raw_light_samples.size() < 10000) {
+        bool success = driver->poll();
+        if (!success)
+            break;
+    }
+    vl_driver_stop_hmd_light_capture(driver);
 
-    query_fun read_hmd_light = [raw_light_samples](unsigned char *buffer, int size) {
-        if (buffer[0] == VL_MSG_HMD_LIGHT) {
-            vive_headset_lighthouse_pulse_report2 pkt;
-            vl_msg_decode_hmd_light(&pkt, buffer, size);
-            vl_msg_print_hmd_light_csv(&pkt);
-
-            for(int i = 0; i < 9; i++){
-                raw_light_samples->push_back(pkt.samples[i]);
-            }
-        }
-    };
-
-    while(raw_light_samples->size() < 10000)
-        hid_query(driver->hmd_lighthouse_device.handle, read_hmd_light);
-
-    vl_light_classify_samples(raw_light_samples);
+    vl_light_classify_samples(driver->raw_light_samples);
 }
 
 static vl_lighthouse_samples parse_csv_file(const std::string& file_path) {
 
-    vl_lighthouse_samples samples;
+    vl_lighthouse_samples samples = {};
     std::string line;
     std::ifstream csv_stream(file_path);
 
@@ -150,7 +154,7 @@ static vl_lighthouse_samples parse_csv_file(const std::string& file_path) {
 static void dump_station_angle_from_csv(const std::string& file_path) {
     vl_lighthouse_samples samples = parse_csv_file(file_path);
     if (!samples.empty())
-        vl_light_classify_samples(&samples);
+        vl_light_classify_samples(samples);
 }
 
 
