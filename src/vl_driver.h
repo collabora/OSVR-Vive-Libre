@@ -103,12 +103,6 @@ static inline int hid_send_feature_report(libusb_device_handle* dev, uint16_t in
     return data.size();
 }
 
-// TODO: remove these two.
-typedef std::function<void(unsigned char*,int)> query_fun;
-static inline void hid_query(libusb_device_handle* dev, query_fun fun) {
-    abort();
-}
-
 typedef void(*capture_callback)(uint8_t*, int, vl_driver*);
 struct vl_callback {
     vl_driver* driver;
