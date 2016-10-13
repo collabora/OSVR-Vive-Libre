@@ -242,7 +242,9 @@ static Eigen::Vector3d vec3_from_gyro(const __s16* smp)
 }
 
 
-void vl_driver_log_watchman(uint8_t* buffer, int size) {
+void vl_driver_log_watchman(uint8_t* buffer, int size, vl_driver* driver) {
+    (void)driver;
+
     if (buffer[0] != VL_MSG_WATCHMAN) {
         vl_warn("Called %s with a wrong buffer type (0x%02x).", __func__, buffer[0]);
         return;
@@ -253,7 +255,9 @@ void vl_driver_log_watchman(uint8_t* buffer, int size) {
     vl_msg_print_watchman(&pkt);
 }
 
-void vl_driver_log_hmd_mainboard(unsigned char *buffer, int size) {
+void vl_driver_log_hmd_mainboard(unsigned char *buffer, int size, vl_driver* driver) {
+    (void)driver;
+
     if (size != 64) {
         vl_warn("Called %s with a wrong buffer length (%d expected, %d got).", __func__, 64, size);
         return;
@@ -290,7 +294,9 @@ void vl_driver_log_hmd_mainboard(unsigned char *buffer, int size) {
     vl_info("IPD: %4.1fmm", 1e-2 * pkt.ipd);
 }
 
-void vl_driver_log_hmd_imu(unsigned char *buffer, int size) {
+void vl_driver_log_hmd_imu(unsigned char *buffer, int size, vl_driver* driver) {
+    (void)driver;
+
     if (buffer[0] != VL_MSG_HMD_IMU) {
         vl_warn("Called %s with a wrong buffer type (0x%02x).", __func__, buffer[0]);
         return;
@@ -301,7 +307,9 @@ void vl_driver_log_hmd_imu(unsigned char *buffer, int size) {
     vl_msg_print_hmd_imu(&pkt);
 }
 
-void vl_driver_log_hmd_light(uint8_t* buffer, int size) {
+void vl_driver_log_hmd_light(uint8_t* buffer, int size, vl_driver* driver) {
+    (void)driver;
+
     if (buffer[0] == VL_MSG_HMD_LIGHT) {
         vive_headset_lighthouse_pulse_report2 pkt;
         vl_msg_decode_hmd_light(&pkt, buffer, size);
@@ -317,21 +325,25 @@ void vl_driver_log_hmd_light(uint8_t* buffer, int size) {
 }
 
 static void handle_transfer(libusb_transfer* transfer) {
+    vl_callback* callback = reinterpret_cast<vl_callback*>(transfer->user_data);
+
     if (transfer->status == LIBUSB_TRANSFER_CANCELLED) {
         vl_debug("Transfer cancelled.");
+        delete callback;
         libusb_free_transfer(transfer);
         return;
     }
 
     if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
         vl_error("Transfer had an issue: %d", transfer->status);
+        delete callback;
+        libusb_free_transfer(transfer);
         return;
     }
 
     vl_debug("Transfer complete of %d bytes!", transfer->actual_length);
 
-    capture_callback func = reinterpret_cast<capture_callback>(transfer->user_data);
-    func(transfer->buffer, transfer->actual_length);
+    callback->func(transfer->buffer, transfer->actual_length, callback->driver);
 
     libusb_error ret = static_cast<libusb_error>(libusb_submit_transfer(transfer));
     if (ret != LIBUSB_SUCCESS) {
@@ -340,7 +352,7 @@ static void handle_transfer(libusb_transfer* transfer) {
     }
 }
 
-static bool vl_driver_start_capture(vl_device& dev, int endpoint, capture_callback fun) {
+static bool vl_driver_start_capture(vl_driver* driver, vl_device& dev, int endpoint, capture_callback func) {
     // 0 for no isochronous packet.
     libusb_transfer* transfer = libusb_alloc_transfer(0);
     if (!transfer) {
@@ -352,7 +364,11 @@ static bool vl_driver_start_capture(vl_device& dev, int endpoint, capture_callba
     uint8_t* buffer = dev.transfer_buffers[endpoint].data();
     int length = dev.transfer_buffers[endpoint].size();
 
-    libusb_fill_interrupt_transfer(transfer, dev.handle, endpoint, buffer, length, handle_transfer, reinterpret_cast<void*>(fun), 0);
+    vl_callback* callback = new vl_callback();
+    callback->driver = driver;
+    callback->func = func;
+
+    libusb_fill_interrupt_transfer(transfer, dev.handle, endpoint, buffer, length, handle_transfer, reinterpret_cast<void*>(callback), 0);
 
     libusb_error ret = static_cast<libusb_error>(libusb_submit_transfer(transfer));
     if (ret) {
@@ -381,7 +397,7 @@ static bool vl_driver_stop_capture(vl_device& dev, int endpoint) {
 }
 
 bool vl_driver_start_hmd_mainboard_capture(vl_driver* driver, capture_callback fun) {
-    return vl_driver_start_capture(driver->hmd_device, 0x81, fun);
+    return vl_driver_start_capture(driver, driver->hmd_device, 0x81, fun);
 }
 
 bool vl_driver_stop_hmd_mainboard_capture(vl_driver* driver) {
@@ -389,7 +405,7 @@ bool vl_driver_stop_hmd_mainboard_capture(vl_driver* driver) {
 }
 
 bool vl_driver_start_hmd_imu_capture(vl_driver* driver, capture_callback fun) {
-    return vl_driver_start_capture(driver->hmd_lighthouse_device, 0x81, fun);
+    return vl_driver_start_capture(driver, driver->hmd_lighthouse_device, 0x81, fun);
 }
 
 bool vl_driver_stop_hmd_imu_capture(vl_driver* driver) {
@@ -397,7 +413,7 @@ bool vl_driver_stop_hmd_imu_capture(vl_driver* driver) {
 }
 
 bool vl_driver_start_watchman_capture(vl_driver* driver, capture_callback fun) {
-    return vl_driver_start_capture(driver->watchman_dongle_device, 0x81, fun);
+    return vl_driver_start_capture(driver, driver->watchman_dongle_device, 0x81, fun);
 }
 
 bool vl_driver_stop_watchman_capture(vl_driver* driver) {
@@ -405,7 +421,7 @@ bool vl_driver_stop_watchman_capture(vl_driver* driver) {
 }
 
 bool vl_driver_start_hmd_light_capture(vl_driver* driver, capture_callback fun) {
-    return vl_driver_start_capture(driver->hmd_lighthouse_device, 0x82, fun);
+    return vl_driver_start_capture(driver, driver->hmd_lighthouse_device, 0x82, fun);
 }
 
 bool vl_driver_stop_hmd_light_capture(vl_driver* driver) {
