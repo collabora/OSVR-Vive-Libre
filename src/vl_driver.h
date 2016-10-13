@@ -107,6 +107,7 @@ static inline void hid_query(libusb_device_handle* dev, query_fun fun) {
     abort();
 }
 
+void vl_driver_log_hmd_mainboard(uint8_t* buffer, int size);
 void vl_driver_log_hmd_imu(uint8_t* buffer, int size);
 void vl_driver_log_watchman(uint8_t* buffer, int size);
 void vl_driver_log_hmd_light(uint8_t* buffer, int size);
@@ -115,6 +116,8 @@ void vl_driver_log_hmd_light(uint8_t* buffer, int size);
 //typedef std::function<void(uint8_t*, int)> capture_callback;
 typedef void(*capture_callback)(uint8_t*, int);
 
+bool vl_driver_start_hmd_mainboard_capture(vl_driver*, capture_callback);
+bool vl_driver_stop_hmd_mainboard_capture(vl_driver*);
 bool vl_driver_start_hmd_imu_capture(vl_driver*, capture_callback);
 bool vl_driver_stop_hmd_imu_capture(vl_driver*);
 bool vl_driver_start_watchman_capture(vl_driver*, capture_callback);

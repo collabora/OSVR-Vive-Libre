@@ -12,6 +12,12 @@
 
 #define VIVE_MAINBOARD_STATUS_REPORT_ID			0x03
 
+enum vive_proximity_change : __u8 {
+    NO_CHANGE = 0,
+    DECREASE = 1,
+    INCREASE = 2,
+};
+
 struct vive_mainboard_status_report {
 	__u8 id;
 	__le16 unknown;
@@ -20,7 +26,7 @@ struct vive_mainboard_status_report {
 	__le16 reserved1;
 	__u8 button;
 	__u8 reserved2[3];
-	__u8 proximity_change;
+	vive_proximity_change proximity_change;
 	__u8 reserved3;
 	__le16 proximity;
 	__le16 ipd;

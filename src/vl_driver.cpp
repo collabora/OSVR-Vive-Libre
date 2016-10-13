@@ -253,6 +253,43 @@ void vl_driver_log_watchman(uint8_t* buffer, int size) {
     vl_msg_print_watchman(&pkt);
 }
 
+void vl_driver_log_hmd_mainboard(unsigned char *buffer, int size) {
+    if (size != 64) {
+        vl_warn("Called %s with a wrong buffer length (%d expected, %d got).", __func__, 64, size);
+        return;
+    }
+
+    if (buffer[0] != VIVE_MAINBOARD_STATUS_REPORT_ID) {
+        vl_warn("Called %s with a wrong buffer type (0x%02x).", __func__, buffer[0]);
+        return;
+    }
+
+    vive_mainboard_status_report pkt;
+
+    // TODO: use a proper decode function.
+    memcpy(&pkt, buffer, size);
+    //vl_msg_decode_hmd_mainboard(&pkt, buffer, size);
+    //vl_msg_print_hmd_mainboard(&pkt);
+
+    assert(pkt.len == 60);
+
+    switch (pkt.proximity_change) {
+    case NO_CHANGE:
+        break;
+    case DECREASE:
+        vl_info("proximity decreased: %d", pkt.proximity);
+        break;
+    case INCREASE:
+        vl_info("proximity increased: %d", pkt.proximity);
+        break;
+    }
+
+    // TODO: add some state for those, and likely provide callbacks.
+    vl_info("lens_separation: %d", pkt.lens_separation);
+    vl_info("button: %d", pkt.button);
+    vl_info("IPD: %4.1fmm", 1e-2 * pkt.ipd);
+}
+
 void vl_driver_log_hmd_imu(unsigned char *buffer, int size) {
     if (buffer[0] != VL_MSG_HMD_IMU) {
         vl_warn("Called %s with a wrong buffer type (0x%02x).", __func__, buffer[0]);
@@ -341,6 +378,14 @@ static bool vl_driver_stop_capture(vl_device& dev, int endpoint) {
     libusb_transfer* transfer = dev.transfers[endpoint];
     libusb_cancel_transfer(transfer);
     return true;
+}
+
+bool vl_driver_start_hmd_mainboard_capture(vl_driver* driver, capture_callback fun) {
+    return vl_driver_start_capture(driver->hmd_device, 0x81, fun);
+}
+
+bool vl_driver_stop_hmd_mainboard_capture(vl_driver* driver) {
+    return vl_driver_stop_capture(driver->hmd_device, 0x81);
 }
 
 bool vl_driver_start_hmd_imu_capture(vl_driver* driver, capture_callback fun) {

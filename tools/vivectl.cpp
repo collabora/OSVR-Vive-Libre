@@ -22,6 +22,13 @@ static void dump_controller() {
     vl_driver_stop_watchman_capture(driver);
 }
 
+static void dump_hmd_mainboard() {
+    vl_driver_start_hmd_mainboard_capture(driver, vl_driver_log_hmd_mainboard);
+    while (!should_exit)
+        driver->poll();
+    vl_driver_stop_hmd_mainboard_capture(driver);
+}
+
 static void dump_hmd_imu() {
     vl_driver_start_hmd_imu_capture(driver, vl_driver_log_hmd_imu);
     while (!should_exit)
@@ -230,6 +237,7 @@ void run(taskfun task) {
 }
 
 static std::map<std::string, taskfun> dump_commands {
+    { "hmd-mainboard", dump_hmd_mainboard },
     { "hmd-imu", dump_hmd_imu },
     { "hmd-light", dump_hmd_light },
     { "hmd-config", dump_config_hmd },
