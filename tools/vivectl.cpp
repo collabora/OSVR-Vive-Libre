@@ -64,6 +64,22 @@ static void dump_config_hmd() {
     vl_info("hmd_lighthouse_device config: %s", config);
 }
 
+static void dump_hmd_all() {
+    vl_driver_start_hmd_mainboard_capture(driver, vl_driver_log_hmd_mainboard);
+    vl_driver_start_watchman_capture(driver, vl_driver_log_watchman);
+    vl_driver_start_hmd_imu_capture(driver, vl_driver_log_hmd_imu);
+    vl_driver_start_hmd_light_capture(driver, vl_driver_log_hmd_light);
+    while (!should_exit) {
+        bool success = driver->poll();
+        if (!success)
+            break;
+    }
+    vl_driver_stop_hmd_light_capture(driver);
+    vl_driver_stop_hmd_imu_capture(driver);
+    vl_driver_stop_watchman_capture(driver);
+    vl_driver_stop_hmd_mainboard_capture(driver);
+}
+
 
 
 static void dump_station_angle() {
@@ -237,6 +253,7 @@ void run(taskfun task) {
 }
 
 static std::map<std::string, taskfun> dump_commands {
+    { "hmd-all", dump_hmd_all },
     { "hmd-mainboard", dump_hmd_mainboard },
     { "hmd-imu", dump_hmd_imu },
     { "hmd-light", dump_hmd_light },
