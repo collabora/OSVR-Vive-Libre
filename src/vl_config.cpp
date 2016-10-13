@@ -16,7 +16,7 @@
 #include <libusb.h>
 
 #include "vl_config.h"
-#include "vl_hidraw.h"
+#include "vl_synchronous.h"
 #include "vl_log.h"
 
 /*

@@ -6,8 +6,6 @@
 
 #pragma once
 
-#include <linux/hidraw.h>
-#include <sys/ioctl.h>
 #include <time.h>
 #include <libusb.h>
 
