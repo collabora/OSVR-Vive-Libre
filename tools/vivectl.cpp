@@ -39,8 +39,10 @@ static void dump_hmd_imu() {
 }
 
 static void dump_hmd_imu_pose() {
-    while(true)
-        driver->update_pose();
+    vl_driver_start_hmd_imu_capture(driver, vl_driver_update_pose);
+    while (!should_exit)
+        driver->poll();
+    vl_driver_stop_hmd_imu_capture(driver);
 }
 
 static void send_hmd_on() {

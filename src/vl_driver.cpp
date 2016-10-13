@@ -264,7 +264,7 @@ void vl_driver_log_hmd_mainboard(unsigned char *buffer, int size, vl_driver* dri
     }
 
     if (buffer[0] != VIVE_MAINBOARD_STATUS_REPORT_ID) {
-        vl_warn("Called %s with a wrong buffer type (0x%02x).", __func__, buffer[0]);
+        vl_warn("Called %s with a wrong buffer type (0x%02x, expected 0x%02x).", __func__, buffer[0], VIVE_MAINBOARD_STATUS_REPORT_ID);
         return;
     }
 
@@ -477,15 +477,18 @@ void vl_driver::_update_pose(const vive_headset_imu_report &pkt) {
     }
 }
 
+void vl_driver_update_pose(unsigned char *buffer, int size, vl_driver* driver) {
+    if (size != 52) {
+        vl_warn("Called %s with a wrong buffer length (%d expected, %d got).", __func__, 52, size);
+        return;
+    }
 
+    if (buffer[0] != VL_MSG_HMD_IMU) {
+        vl_warn("Called %s with a wrong buffer type (0x%02x, expected 0x%02x).", __func__, buffer[0], VL_MSG_HMD_IMU);
+        return;
+    }
 
-void vl_driver::update_pose() {
-    query_fun update_pose_fun = [this](unsigned char *buffer, int size) {
-        if (buffer[0] == VL_MSG_HMD_IMU) {
-            vive_headset_imu_report pkt;
-            vl_msg_decode_hmd_imu(&pkt, buffer, size);
-            this->_update_pose(pkt);
-        }
-    };
-    hid_query(hmd_lighthouse_device.handle, update_pose_fun);
-}
+    vive_headset_imu_report pkt;
+    vl_msg_decode_hmd_imu(&pkt, buffer, size);
+    driver->_update_pose(pkt);
+};

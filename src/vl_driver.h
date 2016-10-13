@@ -119,6 +119,7 @@ void vl_driver_log_hmd_mainboard(uint8_t* buffer, int size, vl_driver* driver);
 void vl_driver_log_hmd_imu(uint8_t* buffer, int size, vl_driver* driver);
 void vl_driver_log_watchman(uint8_t* buffer, int size, vl_driver* driver);
 void vl_driver_log_hmd_light(uint8_t* buffer, int size, vl_driver* driver);
+void vl_driver_update_pose(uint8_t* buffer, int size, vl_driver* driver);
 
 bool vl_driver_start_hmd_mainboard_capture(vl_driver*, capture_callback);
 bool vl_driver_stop_hmd_mainboard_capture(vl_driver*);
