@@ -108,8 +108,7 @@ inline static void vl_msg_print_hmd_imu(vive_headset_imu_report* pkt) {
         }
 
         vl_info("time_ticks: %u", pkt->samples[i].time_ticks);
-        vl_info("seq: %u", pkt->samples[i].seq);
-        vl_info("");
+        vl_info("seq: %u\n", pkt->samples[i].seq);
     }
 }
 
@@ -139,8 +138,7 @@ inline static void vl_msg_print_hmd_light(vive_headset_lighthouse_pulse_report2*
             continue;
         vl_info("     sensor_id[%d]: %u", i, pkt->samples[i].sensor_id);
         vl_info("      length[%d]: %d", i, pkt->samples[i].length);
-        vl_info("      time[%d]: %u", i, pkt->samples[i].timestamp);
-        vl_info("");
+        vl_info("      time[%d]: %u\n", i, pkt->samples[i].timestamp);
     }
 }
 
