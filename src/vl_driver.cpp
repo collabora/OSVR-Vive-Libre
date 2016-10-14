@@ -46,10 +46,7 @@ vl_driver::~vl_driver() {
 }
 
 bool vl_driver::init_devices(unsigned index) {
-    bool success = open_devices(index);
-    if (!success)
-        vl_error("No connected Vive found (index %d).", index);
-    return success;
+    return open_devices(index);
 }
 
 static void print_device_info(libusb_device_handle* dev, const libusb_device_descriptor& desc) {
@@ -201,7 +198,7 @@ bool vl_driver::open_devices(int idx)
     // Open the HMD device
     bool success = open_device_idx(devs, hmd_device, HTC_ID, VIVE_HMD, idx);
     if (!success) {
-        vl_error("No connected VIVE found.");
+        vl_error("No connected Vive found (index %d).", idx);
         return false;
     }
 
