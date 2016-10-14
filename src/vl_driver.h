@@ -42,14 +42,6 @@
 
 #define FEATURE_BUFFER_SIZE 64
 
-#define HTC_ID                   0x0bb4
-#define VIVE_HMD                 0x2c87
-
-#define VALVE_ID                 0x28de
-#define VIVE_WATCHMAN_DONGLE     0x2101
-#define VIVE_LIGHTHOUSE_FPGA_RX  0x2000
-#define VIVE_CONTROLLER          0x2012
-
 #define FREQ_48MHZ 1.0f / 48000000.0f
 
 struct vl_device {

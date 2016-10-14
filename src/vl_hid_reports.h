@@ -3,14 +3,12 @@
  * Copyright 2016 Philipp Zabel
  * SPDX-License-Identifier:	LGPL-2.0+
  */
-#ifndef __VIVE_HID_REPORTS_H__
-#define __VIVE_HID_REPORTS_H__
+
+#pragma once
 
 #include <stdint.h>
 
 #include <asm/byteorder.h>
-
-#define VIVE_MAINBOARD_STATUS_REPORT_ID			0x03
 
 enum vive_proximity_change : __u8 {
     NO_CHANGE = 0,
@@ -33,10 +31,6 @@ struct vive_mainboard_status_report {
 	__u8 reserved4[46];
 } __attribute__((packed));
 
-#define VIVE_HEADSET_POWER_REPORT_ID			0x04
-
-#define VIVE_HEADSET_POWER_REPORT_TYPE			0x2978
-
 struct vive_headset_power_report {
 	__u8 id;
 	__le16 type;
@@ -46,10 +40,6 @@ struct vive_headset_power_report {
 	__u8 unknown2;
 	__u8 reserved2[18];
 } __attribute__((packed));
-
-#define VIVE_HEADSET_MAINBOARD_DEVICE_INFO_REPORT_ID	0x04
-
-#define VIVE_HEADSET_MAINBOARD_DEVICE_INFO_REPORT_TYPE	0x2987
 
 struct vive_headset_mainboard_device_info_report {
 	__u8 id;
@@ -61,8 +51,6 @@ struct vive_headset_mainboard_device_info_report {
 	__le32 display_firmware_version;
 	__u8 unknown2[48];
 } __attribute__((packed));
-
-#define VIVE_FIRMWARE_VERSION_REPORT_ID			0x05
 
 struct vive_firmware_version_report {
 	__u8 id;
@@ -80,8 +68,6 @@ struct vive_firmware_version_report {
 	__u8 reserved[13];
 } __attribute__((packed));
 
-#define VIVE_HEADSET_IMU_REPORT_ID			0x20
-
 struct vive_headset_imu_sample {
         __s16 acc[3];
         __s16 rot[3];
@@ -93,8 +79,6 @@ struct vive_headset_imu_report {
 	__u8 report_id;
 	struct vive_headset_imu_sample samples[3];
 } __attribute__((packed));
-
-#define VIVE_HEADSET_LIGHTHOUSE_PULSE_REPORT1_ID	0x21
 
 struct vive_headset_lighthouse_pulse1 {
 	__u8 sensor_id;
@@ -109,19 +93,10 @@ struct vive_headset_lighthouse_pulse_report1 {
 	__u8 padding;
 } __attribute__((packed));
 
-#define VIVE_CONTROLLER_REPORT1_ID			0x23
-
 struct vive_controller_analog_trigger_message {
 	__u8 squeeze;
 	__u8 unknown[4];
 } __attribute__((packed));
-
-#define VIVE_CONTROLLER_BUTTON_TRIGGER			0x01
-#define VIVE_CONTROLLER_BUTTON_TOUCH			0x02
-#define VIVE_CONTROLLER_BUTTON_THUMB			0x04
-#define VIVE_CONTROLLER_BUTTON_SYSTEM			0x08
-#define VIVE_CONTROLLER_BUTTON_GRIP			0x10
-#define VIVE_CONTROLLER_BUTTON_MENU			0x20
 
 struct vive_controller_button_message {
 	__u8 buttons;
@@ -175,14 +150,10 @@ struct vive_controller_report1 {
 	struct vive_controller_message message;
 } __attribute__((packed));
 
-#define VIVE_CONTROLLER_REPORT2_ID			0x24
-
 struct vive_controller_report2 {
         uint8_t id;
 	struct vive_controller_message message[2];
 } __attribute__((packed));
-
-#define VIVE_HEADSET_LIGHTHOUSE_PULSE_REPORT2_ID	0x25
 
 struct vive_headset_lighthouse_pulse2 {
         uint8_t sensor_id;
@@ -195,17 +166,9 @@ struct vive_headset_lighthouse_pulse_report2 {
 	struct vive_headset_lighthouse_pulse2 samples[9];
 } __attribute__((packed));
 
-#define VIVE_CONTROLLER_DISCONNECT_REPORT_ID		0x26
-
-#define VIVE_CONTROLLER_COMMAND_REPORT_ID		0xff
-
-#define VIVE_CONTROLLER_POWEROFF_COMMAND		0x9f
-
 struct vive_controller_poweroff_report {
 	__u8 id;
 	__u8 command;
 	__u8 len;
 	__u8 magic[4];
 } __attribute__((packed));
-
-#endif /* __VIVE_HID_REPORTS_H__ */

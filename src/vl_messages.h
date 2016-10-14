@@ -30,15 +30,6 @@
 #include "vl_hid_reports.h"
 #include "vl_log.h"
 
-typedef enum
-{
-    VL_MSG_HMD_IMU = 32,
-    VL_MSG_CONTROLLER_LIGHT = 33,
-    VL_MSG_WATCHMAN = 35,
-    VL_MSG_36 = 36,
-    VL_MSG_HMD_LIGHT = 37,
-} vl_message;
-
 inline static uint8_t read8(const unsigned char** buffer)
 {
     uint8_t ret = **buffer;

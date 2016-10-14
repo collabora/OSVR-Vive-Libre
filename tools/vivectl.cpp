@@ -4,8 +4,9 @@
 #include <signal.h>
 #include <string>
 #include <map>
-#include "vl_driver.h"
 #include "vl_config.h"
+#include "vl_driver.h"
+#include "vl_enums.h"
 #include "vl_light.h"
 #include "vl_log.h"
 
@@ -85,8 +86,10 @@ static void dump_hmd_all() {
 }
 
 static void read_hmd_light(uint8_t* buffer, int size, vl_driver* driver) {
-    if (buffer[0] != VL_MSG_HMD_LIGHT) {
-        vl_error("Wrong light message type, expected %d got %d.", VL_MSG_HMD_LIGHT, buffer[0]);
+    vl_report_id report_id = static_cast<vl_report_id>(buffer[0]);
+
+    if (report_id != vl_report_id::HMD_LIGHTHOUSE_PULSE2) {
+        vl_error("Wrong light message type, expected %d got %d.", vl_report_id::HMD_LIGHTHOUSE_PULSE2, buffer[0]);
         return;
     }
 

@@ -30,8 +30,10 @@
 #include <libusb.h>
 
 #include "vl_driver.h"
+#include "vl_enums.h"
 #include "vl_math.h"
 #include "vl_log.h"
+#include "vl_enums.h"
 
 vl_driver::vl_driver() {
     libusb_init(&context);
@@ -79,10 +81,13 @@ static std::string _hid_to_unix_path(libusb_device* dev)
    return std::string(path);
 }
 
-static bool open_device_idx(libusb_device** devs, vl_device& device, uint16_t manufacturer, uint16_t product, int device_index)
+static bool open_device_idx(libusb_device** devs, vl_device& device, vl_vendor vendor, vl_product product, int device_index)
 {
+    uint16_t id_vendor = static_cast<uint16_t>(vendor);
+    uint16_t id_product = static_cast<uint16_t>(product);
     libusb_device* dev;
     int idx = 0, index = -1;
+
     while ((dev = devs[idx++])) {
         libusb_device_descriptor desc;
         libusb_device_handle* handle;
@@ -93,11 +98,11 @@ static bool open_device_idx(libusb_device** devs, vl_device& device, uint16_t ma
             continue;
         }
 
-        if (desc.idVendor != manufacturer || desc.idProduct != product)
+        if (desc.idVendor != id_vendor || desc.idProduct != id_product)
             continue;
 
         ++index;
-        vl_debug("Found device %04X:%04X %d/%d", manufacturer, product, index + 1,
+        vl_debug("Found device %04X:%04X %d/%d", id_vendor, id_product, index + 1,
                  device_index + 1);
 
         if (index != device_index) {
@@ -119,7 +124,7 @@ static bool open_device_idx(libusb_device** devs, vl_device& device, uint16_t ma
             std::string path = _hid_to_unix_path(dev);
             vl_warn("Failed to open device %04X:%04X.\nIs another driver "
                     "running?  Do you have the correct udev rules in "
-                    "place?", manufacturer, product);
+                    "place?", id_vendor, id_product);
             vl_warn("Try: sudo chmod 666 %s", path.c_str());
             continue;
         }
@@ -155,7 +160,7 @@ static bool open_device_idx(libusb_device** devs, vl_device& device, uint16_t ma
                 ret = libusb_detach_kernel_driver(handle, iface);
                 if (ret != LIBUSB_SUCCESS) {
                     vl_warn("Failed to unclaim interface %d for device %04X:%04X "
-                            "from the kernel.", iface, manufacturer, product);
+                            "from the kernel.", iface, id_vendor, id_product);
                     libusb_free_config_descriptor(conf_desc);
                     libusb_close(handle);
                     continue;
@@ -165,7 +170,7 @@ static bool open_device_idx(libusb_device** devs, vl_device& device, uint16_t ma
             ret = libusb_claim_interface(handle, iface);
             if (ret != LIBUSB_SUCCESS) {
                 vl_warn("Failed to claim interface %d for device %04X:%04X.",
-                        iface, manufacturer, product);
+                        iface, id_vendor, id_product);
                 libusb_free_config_descriptor(conf_desc);
                 libusb_close(handle);
                 continue;
@@ -196,18 +201,18 @@ bool vl_driver::open_devices(int idx)
     }
 
     // Open the HMD device
-    bool success = open_device_idx(devs, hmd_device, HTC_ID, VIVE_HMD, idx);
+    bool success = open_device_idx(devs, hmd_device, vl_vendor::HTC, vl_product::HMD, idx);
     if (!success) {
         vl_error("No connected Vive found (index %d).", idx);
         return false;
     }
 
     // Open the lighthouse device
-    success = open_device_idx(devs, hmd_lighthouse_device, VALVE_ID, VIVE_LIGHTHOUSE_FPGA_RX, idx);
+    success = open_device_idx(devs, hmd_lighthouse_device, vl_vendor::VALVE, vl_product::LIGHTHOUSE_FPGA_RX, idx);
     if (!success)
         return false;
 
-    success = open_device_idx(devs, watchman_dongle_device, VALVE_ID, VIVE_WATCHMAN_DONGLE, idx);
+    success = open_device_idx(devs, watchman_dongle_device, vl_vendor::VALVE, vl_product::WATCHMAN_DONGLE, idx);
     if (!success)
         return false;
 
@@ -242,7 +247,9 @@ static Eigen::Vector3d vec3_from_gyro(const __s16* smp)
 void vl_driver_log_watchman(uint8_t* buffer, int size, vl_driver* driver) {
     (void)driver;
 
-    if (buffer[0] != VL_MSG_WATCHMAN) {
+    vl_report_id report_id = static_cast<vl_report_id>(buffer[0]);
+
+    if (report_id != vl_report_id::CONTROLLER1) {
         vl_warn("Called %s with a wrong buffer type (0x%02x).", __func__, buffer[0]);
         return;
     }
@@ -255,13 +262,17 @@ void vl_driver_log_watchman(uint8_t* buffer, int size, vl_driver* driver) {
 void vl_driver_log_hmd_mainboard(unsigned char *buffer, int size, vl_driver* driver) {
     (void)driver;
 
+    vl_report_id report_id = static_cast<vl_report_id>(buffer[0]);
+
     if (size != 64) {
         vl_warn("Called %s with a wrong buffer length (%d expected, %d got).", __func__, 64, size);
         return;
     }
 
-    if (buffer[0] != VIVE_MAINBOARD_STATUS_REPORT_ID) {
-        vl_warn("Called %s with a wrong buffer type (0x%02x, expected 0x%02x).", __func__, buffer[0], VIVE_MAINBOARD_STATUS_REPORT_ID);
+    if (report_id != vl_report_id::HMD_MAINBOARD_STATUS) {
+        vl_warn("Called %s with a wrong buffer type (0x%02x, expected 0x%02x).",
+                __func__, buffer[0],
+                static_cast<uint8_t>(vl_report_id::HMD_MAINBOARD_STATUS));
         return;
     }
 
@@ -294,7 +305,9 @@ void vl_driver_log_hmd_mainboard(unsigned char *buffer, int size, vl_driver* dri
 void vl_driver_log_hmd_imu(unsigned char *buffer, int size, vl_driver* driver) {
     (void)driver;
 
-    if (buffer[0] != VL_MSG_HMD_IMU) {
+    vl_report_id report_id = static_cast<vl_report_id>(buffer[0]);
+
+    if (report_id != vl_report_id::HMD_IMU) {
         vl_warn("Called %s with a wrong buffer type (0x%02x).", __func__, buffer[0]);
         return;
     }
@@ -307,12 +320,14 @@ void vl_driver_log_hmd_imu(unsigned char *buffer, int size, vl_driver* driver) {
 void vl_driver_log_hmd_light(uint8_t* buffer, int size, vl_driver* driver) {
     (void)driver;
 
-    if (buffer[0] == VL_MSG_HMD_LIGHT) {
+    vl_report_id report_id = static_cast<vl_report_id>(buffer[0]);
+
+    if (report_id == vl_report_id::HMD_LIGHTHOUSE_PULSE2) {
         vive_headset_lighthouse_pulse_report2 pkt;
         vl_msg_decode_hmd_light(&pkt, buffer, size);
         //vl_msg_print_hmd_light(&pkt);
         vl_msg_print_hmd_light_csv(&pkt);
-    } else if (buffer[0] == VL_MSG_CONTROLLER_LIGHT) {
+    } else if (report_id == vl_report_id::HMD_LIGHTHOUSE_PULSE1) {
         vive_headset_lighthouse_pulse_report1 pkt = vive_headset_lighthouse_pulse_report1();
         vl_msg_decode_controller_light(&pkt, buffer, size);
         vl_msg_print_controller_light(&pkt);
@@ -475,13 +490,18 @@ void vl_driver::_update_pose(const vive_headset_imu_report &pkt) {
 }
 
 void vl_driver_update_pose(unsigned char *buffer, int size, vl_driver* driver) {
+    vl_report_id report_id = static_cast<vl_report_id>(buffer[0]);
+
     if (size != 52) {
-        vl_warn("Called %s with a wrong buffer length (%d expected, %d got).", __func__, 52, size);
+        vl_warn("Called %s with a wrong buffer length (%d expected, %d got).",
+                __func__, 52, size);
         return;
     }
 
-    if (buffer[0] != VL_MSG_HMD_IMU) {
-        vl_warn("Called %s with a wrong buffer type (0x%02x, expected 0x%02x).", __func__, buffer[0], VL_MSG_HMD_IMU);
+    if (report_id != vl_report_id::HMD_IMU) {
+        vl_warn("Called %s with a wrong buffer type (0x%02x, expected 0x%02x).",
+                __func__, buffer[0],
+                static_cast<uint8_t>(vl_report_id::HMD_IMU));
         return;
     }
 

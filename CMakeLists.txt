@@ -52,6 +52,7 @@ set(SOURCES
     src/vl_hid_reports.h
     src/vl_driver.cpp
     src/vl_driver.h
+    src/vl_enums.h
     src/vl_fusion.cpp
     src/vl_fusion.h
     src/vl_magic.h
