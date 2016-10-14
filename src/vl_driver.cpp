@@ -491,4 +491,4 @@ void vl_driver_update_pose(unsigned char *buffer, int size, vl_driver* driver) {
     vive_headset_imu_report pkt;
     vl_msg_decode_hmd_imu(&pkt, buffer, size);
     driver->_update_pose(pkt);
-};
+}
