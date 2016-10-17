@@ -13,37 +13,44 @@
 static bool should_exit = false;
 static vl_driver* driver;
 
+#define CHECK(result, out) \
+{ \
+    bool success = (result); \
+    if (!success) { \
+        out; \
+    } \
+}
+
 static bool compare(const std::string& str1, const std::string& str2) {
     return str1.compare(str2) == 0;
 }
 
 static void dump_controller() {
-    vl_driver_start_watchman_capture(driver, vl_driver_log_watchman);
-    while (!should_exit) {
-        driver->poll();
-    }
-    vl_driver_stop_watchman_capture(driver);
+    CHECK(vl_driver_start_watchman_capture(driver, vl_driver_log_watchman), return);
+    while (!should_exit)
+        CHECK(driver->poll(), break);
+    CHECK(vl_driver_stop_watchman_capture(driver), return);
 }
 
 static void dump_hmd_mainboard() {
-    vl_driver_start_hmd_mainboard_capture(driver, vl_driver_log_hmd_mainboard);
+    CHECK(vl_driver_start_hmd_mainboard_capture(driver, vl_driver_log_hmd_mainboard), return);
     while (!should_exit)
-        driver->poll();
-    vl_driver_stop_hmd_mainboard_capture(driver);
+        CHECK(driver->poll(), break);
+    CHECK(vl_driver_stop_hmd_mainboard_capture(driver), return);
 }
 
 static void dump_hmd_imu() {
-    vl_driver_start_hmd_imu_capture(driver, vl_driver_log_hmd_imu);
+    CHECK(vl_driver_start_hmd_imu_capture(driver, vl_driver_log_hmd_imu), return);
     while (!should_exit)
-        driver->poll();
-    vl_driver_stop_hmd_imu_capture(driver);
+        CHECK(driver->poll(), break);
+    CHECK(vl_driver_stop_hmd_imu_capture(driver), return);
 }
 
 static void dump_hmd_imu_pose() {
-    vl_driver_start_hmd_imu_capture(driver, vl_driver_update_pose);
+    CHECK(vl_driver_start_hmd_imu_capture(driver, vl_driver_update_pose), return);
     while (!should_exit)
-        driver->poll();
-    vl_driver_stop_hmd_imu_capture(driver);
+        CHECK(driver->poll(), break);
+    CHECK(vl_driver_stop_hmd_imu_capture(driver), return);
 }
 
 static void send_hmd_on() {
@@ -57,10 +64,10 @@ static void send_hmd_on() {
 static void dump_hmd_light() {
     // hmd needs to be on to receive light reports.
     send_hmd_on();
-    vl_driver_start_hmd_light_capture(driver, vl_driver_log_hmd_light);
+    CHECK(vl_driver_start_hmd_light_capture(driver, vl_driver_log_hmd_light), return);
     while (!should_exit)
-        driver->poll();
-    vl_driver_stop_hmd_light_capture(driver);
+        CHECK(driver->poll(), break);
+    CHECK(vl_driver_stop_hmd_light_capture(driver), return);
 }
 
 static void dump_config_hmd() {
@@ -69,18 +76,18 @@ static void dump_config_hmd() {
 }
 
 static void dump_hmd_all() {
-    vl_driver_start_hmd_mainboard_capture(driver, vl_driver_log_hmd_mainboard);
-    vl_driver_start_watchman_capture(driver, vl_driver_log_watchman);
-    vl_driver_start_hmd_imu_capture(driver, vl_driver_log_hmd_imu);
-    vl_driver_start_hmd_light_capture(driver, vl_driver_log_hmd_light);
-    while (!should_exit) {
-        bool success = driver->poll();
-        if (!success)
-            break;
-    }
+    CHECK(vl_driver_start_hmd_mainboard_capture(driver, vl_driver_log_hmd_mainboard), return);
+    CHECK(vl_driver_start_watchman_capture(driver, vl_driver_log_watchman), goto out_hmd_mainboard);
+    CHECK(vl_driver_start_hmd_imu_capture(driver, vl_driver_log_hmd_imu), goto out_watchman);
+    CHECK(vl_driver_start_hmd_light_capture(driver, vl_driver_log_hmd_light), goto out_hmd_imu);
+    while (!should_exit)
+        CHECK(driver->poll(), break);
     vl_driver_stop_hmd_light_capture(driver);
+out_hmd_imu:
     vl_driver_stop_hmd_imu_capture(driver);
+out_watchman:
     vl_driver_stop_watchman_capture(driver);
+out_hmd_mainboard:
     vl_driver_stop_hmd_mainboard_capture(driver);
 }
 
@@ -104,13 +111,10 @@ static void read_hmd_light(uint8_t* buffer, int size, vl_driver* driver) {
 static void dump_station_angle() {
     send_hmd_on();
 
-    vl_driver_start_hmd_light_capture(driver, read_hmd_light);
-    while (driver->raw_light_samples.size() < 10000) {
-        bool success = driver->poll();
-        if (!success)
-            break;
-    }
-    vl_driver_stop_hmd_light_capture(driver);
+    CHECK(vl_driver_start_hmd_light_capture(driver, read_hmd_light), return);
+    while (driver->raw_light_samples.size() < 10000)
+        CHECK(driver->poll(), break);
+    CHECK(vl_driver_stop_hmd_light_capture(driver), return);
 
     vl_light_classify_samples(driver->raw_light_samples);
 }
