@@ -256,7 +256,7 @@ static void send_controller_off() {
 }
 
 static void signal_interrupt_handler(int sig) {
-    signal(sig, SIG_IGN);
+    signal(sig, SIG_DFL);
     should_exit = true;
 }
 
