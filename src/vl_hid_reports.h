@@ -121,7 +121,8 @@ struct vive_controller_imu_message {
 } __attribute__((packed));
 
 struct vive_controller_ping_message {
-	__u8 charge;
+	__u8 charge : 7;
+	__u8 charging : 1;
 	__u8 unknown1[2];
 	__le16 accel[3];
 	__le16 gyro[3];

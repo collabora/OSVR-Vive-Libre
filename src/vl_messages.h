@@ -293,7 +293,8 @@ inline static void vl_msg_print_watchman(vive_controller_message* msg) {
                 vl_msg_get_vec3(msg->imu.gyro).c_str());
 
     } else if (type == vl_controller_type::PING) {
-        vl_info("%f: %hhu charge: %d", vl_msg_get_time(time), msg->sensor_id,
+        vl_info("%f: %hhu %s: %d", vl_msg_get_time(time), msg->sensor_id,
+                msg->ping.charging ? "charging" : "discharging",
                 msg->ping.charge);
         if (msg->sensor_id == 17)
             vl_info("accel(%s) gyro(%s)",
