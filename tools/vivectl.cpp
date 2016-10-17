@@ -52,7 +52,6 @@ static void send_hmd_on() {
                                    0,
                                    vive_magic_power_on);
     vl_info("power on magic: %d", hret);
-    while(true);
 }
 
 static void dump_hmd_light() {
