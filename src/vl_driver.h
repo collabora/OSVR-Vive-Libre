@@ -62,7 +62,9 @@ public:
     uint32_t previous_ticks;
     std::unique_ptr<vl_fusion> sensor_fusion;
     vl_lighthouse_samples raw_light_samples = {};
-
+    uint16_t lens_separation;
+    uint16_t ipd;
+    bool button;
 
     vl_driver();
     ~vl_driver();

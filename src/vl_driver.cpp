@@ -310,10 +310,22 @@ void vl_driver_log_hmd_mainboard(unsigned char *buffer, int size, vl_driver* dri
         break;
     }
 
-    // TODO: add some state for those, and likely provide callbacks.
-    vl_info("lens_separation: %d", pkt.lens_separation);
-    vl_info("button: %d", pkt.button);
-    vl_info("IPD: %4.1fmm", 1e-2 * pkt.ipd);
+    uint16_t lens_separation = __le16_to_cpu(pkt.lens_separation);
+    if (lens_separation != driver->lens_separation) {
+        vl_info("lens_separation: %d", lens_separation);
+        driver->lens_separation = lens_separation;
+    }
+
+    if (pkt.button != driver->button) {
+        vl_info("button: %d", pkt.button);
+        driver->button = pkt.button;
+    }
+
+    uint16_t ipd = __le16_to_cpu(pkt.ipd);
+    if (ipd != driver->ipd) {
+        vl_info("IPD: %4.1fmm", 1e-2 * ipd);
+        driver->ipd = ipd;
+    }
 }
 
 void vl_driver_log_hmd_imu(unsigned char *buffer, int size, vl_driver* driver) {
