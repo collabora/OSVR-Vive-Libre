@@ -100,22 +100,21 @@ struct vive_controller_analog_trigger_message {
 
 struct vive_controller_button_message {
 	__u8 buttons;
-	__u8 unknown[4];
 } __attribute__((packed));
 
-struct vive_controller_touchpad_move_message {
+struct vive_controller_touch_move_message {
 	__le16 pos[2];
 	__u8 unknown[4];
 } __attribute__((packed));
 
-struct vive_controller_touchpad_updown_message {
+struct vive_controller_touch_press_message {
 	__u8 buttons;
 	__le16 pos[2];
 	__u8 unknown[4];
 } __attribute__((packed));
 
 struct vive_controller_imu_message {
-	__u8 timestamp_3;
+	__u8 time3;
 	__le16 accel[3];
 	__le16 gyro[3];
 	__u8 unknown[4];
@@ -131,14 +130,14 @@ struct vive_controller_ping_message {
 
 struct vive_controller_message {
 	__u8 time1;
-	__u8 type1;
+	__u8 sensor_id;
 	__u8 time2;
-	__u8 type2;
+	__u8 type;
 	union {
 		struct vive_controller_analog_trigger_message analog_trigger;
 		struct vive_controller_button_message button;
-		struct vive_controller_touchpad_move_message touchpad_move;
-		struct vive_controller_touchpad_updown_message touchpad_updown;
+		struct vive_controller_touch_move_message touch_move;
+		struct vive_controller_touch_press_message touch_press;
 		struct vive_controller_imu_message imu;
 		struct vive_controller_ping_message ping;
 		__u8 unknown[25];
@@ -151,7 +150,7 @@ struct vive_controller_report1 {
 } __attribute__((packed));
 
 struct vive_controller_report2 {
-        uint8_t id;
+	__u8 report_id;
 	struct vive_controller_message message[2];
 } __attribute__((packed));
 

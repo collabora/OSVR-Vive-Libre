@@ -57,10 +57,10 @@ enum class vl_report_type : uint16_t {
     HMD_MAINBOARD_DEVICE_INFO = 0x2987,
 };
 
-enum class vl_controller_button : uint8_t {
+enum vl_controller_button : uint8_t {
     TRIGGER = 0x01,
     TOUCH = 0x02,
-    THUMB = 0x04,
+    TOUCH_PRESS = 0x04,
     SYSTEM = 0x08,
     GRIP = 0x10,
     MENU = 0x20,
@@ -68,4 +68,11 @@ enum class vl_controller_button : uint8_t {
 
 enum class vl_controller_command : uint8_t {
     POWEROFF = 0x9f,
+};
+
+enum class vl_controller_type : uint8_t {
+    PING = 0xe1,
+    IMU = 0xe8,
+    TOUCH = 0xf2,
+    ANALOG_TRIGGER = 0xf4,
 };

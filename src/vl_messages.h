@@ -26,7 +26,9 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <cassert>
+#include <cstdint>
+#include "vl_enums.h"
 #include "vl_hid_reports.h"
 #include "vl_log.h"
 
@@ -199,26 +201,122 @@ inline static bool vl_msg_decode_watchman(vive_controller_report1* pkt, const un
 
     pkt->report_id = buffer[0];
     pkt->message.time1 = buffer[1];
-    pkt->message.type1 = buffer[2];
+    pkt->message.sensor_id = buffer[2];
     pkt->message.time2 = buffer[3];
-    pkt->message.type2 = buffer[4];
+    pkt->message.type = buffer[4];
     memcpy(&pkt->message.unknown, &buffer[5], sizeof(pkt->message.unknown));
 
     return true;
 }
 
-inline static void vl_msg_print_watchman(vive_controller_report1 * pkt) {
-    /*
-    vl_info("vive watchman sample:");
-    vl_info("  report_id: %u", pkt->report_id);
-    vl_info("  time1: %u", pkt->time1);
-    vl_info("  type1: %u", pkt->type1);
-    vl_info("  time2: %u", pkt->time2);
-    vl_info("  type2: %d", pkt->type2);
-    */
+inline static bool vl_msg_decode_watchman2(vive_controller_report2* pkt, const unsigned char* buffer, int size)
+{
+    if(size != 59){
+        vl_error("invalid vive sensor packet size (expected 59 but got %d)", size);
+        return false;
+    }
 
-    vive_controller_message* msg = &pkt->message;
-    vl_info("type %d %d buttons", msg->type1, msg->type2);
+    pkt->report_id = buffer[0];
+    for (int i = 0; i < 2; ++i) {
+        vive_controller_message* msg = &pkt->message[i];
+        msg->time1 = buffer[1];
+        msg->sensor_id = buffer[2];
+        msg->time2 = buffer[3];
+        msg->type = buffer[4];
+        memcpy(&msg->unknown, &buffer[5], sizeof(msg->unknown));
+    }
+
+    return true;
+}
+
+inline static double vl_msg_get_time(uint32_t time) {
+    return time / 48000000.;
+}
+
+inline static int16_t vl_msg_get_int16(__le16 value) {
+    return static_cast<int16_t>(__le16_to_cpu(value));
+}
+
+inline static double vl_msg_get_touch(__le16 value) {
+    return vl_msg_get_int16(value) / 32768.;
+}
+
+inline static std::string vl_msg_get_vec3(__le16 data[3]) {
+    std::stringstream ret;
+    ret << std::to_string(vl_msg_get_int16(data[0]))
+        << ", "
+        << std::to_string(vl_msg_get_int16(data[1]))
+        << ", "
+        << std::to_string(vl_msg_get_int16(data[2]));
+    return ret.str();
+}
+
+inline static std::string vl_msg_get_button(vive_controller_message* msg) {
+    std::stringstream ret;
+    assert(msg->button.buttons <= 0x3f);
+    uint8_t button = msg->button.buttons;
+    if (button & vl_controller_button::TRIGGER)
+        ret << "trigger";
+    if (button & vl_controller_button::TOUCH)
+        ret << (ret.str().empty() ? "" : ", ") << "touch";
+    if (button & vl_controller_button::TOUCH_PRESS) {
+        ret << (ret.str().empty() ? "" : ", ")
+            << "touch press ("
+            << std::to_string(vl_msg_get_touch(msg->touch_press.pos[0]))
+            << ", "
+            << std::to_string(vl_msg_get_touch(msg->touch_press.pos[1]))
+            << ")";
+    }
+    if (button & vl_controller_button::SYSTEM)
+        ret << (ret.str().empty() ? "" : ", ") << "system";
+    if (button & vl_controller_button::GRIP)
+        ret << (ret.str().empty() ? "" : ", ") << "grip";
+    if (button & vl_controller_button::MENU)
+        ret << (ret.str().empty() ? "" : ", ") << "menu";
+    if (ret.str().empty())
+        return "nothing";
+    return ret.str();
+}
+
+inline static void vl_msg_print_watchman(vive_controller_message* msg) {
+    uint32_t time = (msg->time1 << 24) | (msg->time2 << 16);
+
+    vl_controller_type type = static_cast<vl_controller_type>(msg->type);
+
+    if (type == vl_controller_type::IMU) {
+        // sensor_id 15 is always reported, other sensor_ids only when the
+        // controller can see the lighthouses.
+        time |= msg->imu.time3 << 8;
+        vl_info("%f: %hhu accel(%s) gyro(%s)", vl_msg_get_time(time),
+                msg->sensor_id,
+                vl_msg_get_vec3(msg->imu.accel).c_str(),
+                vl_msg_get_vec3(msg->imu.gyro).c_str());
+
+    } else if (type == vl_controller_type::PING) {
+        vl_info("%f: %hhu charge: %d", vl_msg_get_time(time), msg->sensor_id,
+                msg->ping.charge);
+        if (msg->sensor_id == 17)
+            vl_info("accel(%s) gyro(%s)",
+                    vl_msg_get_vec3(msg->imu.accel).c_str(),
+                    vl_msg_get_vec3(msg->imu.gyro).c_str());
+
+    } else if ((msg->type & 0xf0) == 0xf0 && (msg->type & 1) == 1) {
+        std::string button_message = vl_msg_get_button(msg);
+        vl_info("%f: button %hhu 0x%02x: %s", vl_msg_get_time(time), msg->sensor_id,
+                msg->type, button_message.c_str());
+
+    } else if (type == vl_controller_type::TOUCH) {
+        vl_info("%f: touch %hhu: (%f, %f)", vl_msg_get_time(time), msg->sensor_id,
+                vl_msg_get_touch(msg->touch_move.pos[0]),
+                vl_msg_get_touch(msg->touch_move.pos[1]));
+
+    } else if (type == vl_controller_type::ANALOG_TRIGGER) {
+        vl_info("%f: analog trigger %hhu: %d", vl_msg_get_time(time), msg->sensor_id,
+                msg->analog_trigger.squeeze);
+
+    } else {
+        vl_debug("unknown message 0x%02x on %hhu", msg->type, msg->sensor_id);
+    }
 }
 
 

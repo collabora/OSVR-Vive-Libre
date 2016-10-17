@@ -243,20 +243,31 @@ static Eigen::Vector3d vec3_from_gyro(const __s16* smp)
     return sample * VL_POW_2_M12; // 8/32768 = 2^-12
 }
 
-
 void vl_driver_log_watchman(uint8_t* buffer, int size, vl_driver* driver) {
     (void)driver;
 
     vl_report_id report_id = static_cast<vl_report_id>(buffer[0]);
 
-    if (report_id != vl_report_id::CONTROLLER1) {
-        vl_warn("Called %s with a wrong buffer type (0x%02x).", __func__, buffer[0]);
-        return;
-    }
+    if (report_id == vl_report_id::CONTROLLER1) {
+        vive_controller_report1 pkt;
+        vl_msg_decode_watchman(&pkt, buffer, size);
+        vive_controller_message* msg = &pkt.message;
+        vl_msg_print_watchman(msg);
 
-    vive_controller_report1 pkt = vive_controller_report1();
-    vl_msg_decode_watchman(&pkt, buffer, size);
-    vl_msg_print_watchman(&pkt);
+    } else if (report_id == vl_report_id::CONTROLLER2) {
+        vive_controller_report2 pkt;
+        vl_msg_decode_watchman2(&pkt, buffer, size);
+        for (int i = 0; i < 2; ++i) {
+            vive_controller_message* msg = &pkt.message[i];
+            vl_msg_print_watchman(msg);
+        }
+
+    } else if (report_id == vl_report_id::CONTROLLER_DISCONNECT) {
+        vl_info("Controller disconnected.");
+
+    } else {
+        vl_warn("Called %s with a wrong buffer type (0x%02x).", __func__, buffer[0]);
+    }
 }
 
 void vl_driver_log_hmd_mainboard(unsigned char *buffer, int size, vl_driver* driver) {
