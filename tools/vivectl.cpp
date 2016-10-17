@@ -80,8 +80,12 @@ static void dump_hmd_all() {
     CHECK(vl_driver_start_watchman_capture(driver, vl_driver_log_watchman), goto out_hmd_mainboard);
     CHECK(vl_driver_start_hmd_imu_capture(driver, vl_driver_log_hmd_imu), goto out_watchman);
     CHECK(vl_driver_start_hmd_light_capture(driver, vl_driver_log_hmd_light), goto out_hmd_imu);
+    CHECK(vl_driver_start_watchman_capture(driver, vl_driver_log_hmd_light), goto out_hmd_light);
     while (!should_exit)
         CHECK(driver->poll(), break);
+    send_controller_off();
+    vl_driver_stop_watchman_capture(driver);
+out_hmd_light:
     vl_driver_stop_hmd_light_capture(driver);
 out_hmd_imu:
     vl_driver_stop_hmd_imu_capture(driver);
