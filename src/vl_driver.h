@@ -58,7 +58,7 @@ private:
 public:
     vl_device hmd_device;
     vl_device hmd_lighthouse_device;
-    vl_device watchman_dongle_device;
+    std::array<vl_device, 2> watchman_dongle_device;
     uint32_t previous_ticks;
     std::unique_ptr<vl_fusion> sensor_fusion;
     vl_lighthouse_samples raw_light_samples = {};

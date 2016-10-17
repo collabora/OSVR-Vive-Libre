@@ -245,9 +245,10 @@ static void send_hmd_off() {
 }
 
 static void send_controller_off() {
-    hid_send_feature_report(driver->watchman_dongle_device.handle,
-                            1,
-                            vive_controller_power_off);
+    for (int i = 0; i < 2; ++i)
+        hid_send_feature_report(driver->watchman_dongle_device[i].handle,
+                                1,
+                                vive_controller_power_off);
 }
 
 static void signal_interrupt_handler(int sig) {

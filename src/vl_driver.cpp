@@ -43,7 +43,8 @@ vl_driver::vl_driver() {
 vl_driver::~vl_driver() {
     libusb_close(hmd_device.handle);
     libusb_close(hmd_lighthouse_device.handle);
-    libusb_close(watchman_dongle_device.handle);
+    for (vl_device& device : watchman_dongle_device)
+        libusb_close(device.handle);
     libusb_exit(context);
 }
 
@@ -212,9 +213,11 @@ bool vl_driver::open_devices(int idx)
     if (!success)
         return false;
 
-    success = open_device_idx(devs, watchman_dongle_device, vl_vendor::VALVE, vl_product::WATCHMAN_DONGLE, idx);
-    if (!success)
-        return false;
+    for (int i = 0; i < 2; ++i) {
+        success = open_device_idx(devs, watchman_dongle_device[i], vl_vendor::VALVE, vl_product::WATCHMAN_DONGLE, i);
+        if (!success)
+            return false;
+    }
 
     libusb_free_device_list(devs, 1);
 
@@ -441,11 +444,13 @@ bool vl_driver_stop_hmd_imu_capture(vl_driver* driver) {
 }
 
 bool vl_driver_start_watchman_capture(vl_driver* driver, capture_callback fun) {
-    return vl_driver_start_capture(driver, driver->watchman_dongle_device, 0x81, fun);
+    return vl_driver_start_capture(driver, driver->watchman_dongle_device[0], 0x81, fun)
+        && vl_driver_start_capture(driver, driver->watchman_dongle_device[1], 0x81, fun);
 }
 
 bool vl_driver_stop_watchman_capture(vl_driver* driver) {
-    return vl_driver_stop_capture(driver->watchman_dongle_device, 0x81);
+    return vl_driver_stop_capture(driver->watchman_dongle_device[0], 0x81)
+        && vl_driver_stop_capture(driver->watchman_dongle_device[1], 0x81);
 }
 
 bool vl_driver_start_hmd_light_capture(vl_driver* driver, capture_callback fun) {
