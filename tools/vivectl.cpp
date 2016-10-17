@@ -95,7 +95,9 @@ static void read_hmd_light(uint8_t* buffer, int size, vl_driver* driver) {
     vl_report_id report_id = static_cast<vl_report_id>(buffer[0]);
 
     if (report_id != vl_report_id::HMD_LIGHTHOUSE_PULSE2) {
-        vl_error("Wrong light message type, expected %d got %d.", vl_report_id::HMD_LIGHTHOUSE_PULSE2, buffer[0]);
+        vl_error("Wrong light message type, expected %d got %d.",
+                 static_cast<uint8_t>(vl_report_id::HMD_LIGHTHOUSE_PULSE2),
+                 buffer[0]);
         return;
     }
 
@@ -258,6 +260,7 @@ typedef std::function<void(void)> taskfun;
 void run(taskfun task) {
     if (!task)
         return;
+    vl_set_log_level(Level::INFO);
     driver = new vl_driver();
     if (!driver->init_devices(0))
         return;

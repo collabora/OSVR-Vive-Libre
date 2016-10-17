@@ -22,10 +22,10 @@
 #pragma once
 
 enum class Level : int {
-    Debug,
-    Info,
-    Warning,
-    Error
+    DEBUG,
+    INFO,
+    WARNING,
+    ERROR,
 };
 
 void vl_set_log_level(Level level);
@@ -35,7 +35,7 @@ __attribute__((format(printf, 2, 3)))
 #endif
 void vl_log(Level level, const char* format, ...);
 
-#define vl_debug(...) vl_log(Level::Debug, __VA_ARGS__)
-#define vl_info(...) vl_log(Level::Info, __VA_ARGS__)
-#define vl_warn(...) vl_log(Level::Warning, __VA_ARGS__)
-#define vl_error(...) vl_log(Level::Error, __VA_ARGS__)
+#define vl_debug(...) vl_log(Level::DEBUG, __VA_ARGS__)
+#define vl_info(...) vl_log(Level::INFO, __VA_ARGS__)
+#define vl_warn(...) vl_log(Level::WARNING, __VA_ARGS__)
+#define vl_error(...) vl_log(Level::ERROR, __VA_ARGS__)

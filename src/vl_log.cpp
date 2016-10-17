@@ -24,7 +24,7 @@
 
 #include "vl_log.h"
 
-static Level log_level = Level::Debug;
+static Level log_level = Level::DEBUG;
 
 void vl_set_log_level(Level level) {
     log_level = level;
