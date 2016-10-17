@@ -365,6 +365,11 @@ static void handle_transfer(libusb_transfer* transfer) {
 }
 
 static bool vl_driver_start_capture(vl_driver* driver, vl_device& dev, int endpoint, capture_callback func) {
+    if (!dev.handle) {
+        vl_error("Trying to start a capture for a non-open device, aborting.");
+        return false;
+    }
+
     // 0 for no isochronous packet.
     libusb_transfer* transfer = libusb_alloc_transfer(0);
     if (!transfer) {
