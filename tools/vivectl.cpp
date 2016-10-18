@@ -83,7 +83,6 @@ static void dump_hmd_all() {
     CHECK(vl_driver_start_watchman_capture(driver, vl_driver_log_hmd_light), goto out_hmd_light);
     while (!should_exit)
         CHECK(driver->poll(), break);
-    send_controller_off();
     vl_driver_stop_watchman_capture(driver);
 out_hmd_light:
     vl_driver_stop_hmd_light_capture(driver);
