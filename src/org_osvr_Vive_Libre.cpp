@@ -79,6 +79,10 @@ class TrackerDevice {
         m_dev.registerUpdateCallback(this);
 
         this->vive= vive;
+
+        vl_set_log_level(Level::INFO);
+
+        vl_driver_start_hmd_imu_capture(vive, vl_driver_update_pose);
     }
 
 
@@ -89,7 +93,7 @@ class TrackerDevice {
         OSVR_Pose3 pose;
         osvrPose3SetIdentity(&pose);
 
-        vive->update_pose();
+        vive->poll();
 
         if (vive->previous_ticks != 0) {
             const Eigen::Quaterniond& pose_vl = *vive->sensor_fusion->orientation;

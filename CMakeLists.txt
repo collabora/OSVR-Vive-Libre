@@ -84,7 +84,8 @@ target_link_libraries(org_osvr_Vive_Libre
     osvr::osvrCommon
     osvr::osvrUtil
     ${LIBUSB_LIBRARIES}
-    ${ZLIB_LIBRARIES})
+    ${ZLIB_LIBRARIES}
+    vive-libre)
 
 # Install files for the plugin.
 install(
