@@ -64,7 +64,7 @@ Eigen::Quaterniond* vl_fusion::correct_gravity(const Eigen::Vector3d& accelerati
         // The values are optimized of what we would get out
         // from the cross product.
         Eigen::Vector3d up = Eigen::Vector3d::UnitY();
-        double tilt_angle = vector_get_angle(up, acceleration_mean);
+        double tilt_angle = get_angle_between_vectors(up, acceleration_mean);
 
         if(tilt_angle > max_tilt_error){
             Eigen::Vector3d tilt_e = Eigen::Vector3d(

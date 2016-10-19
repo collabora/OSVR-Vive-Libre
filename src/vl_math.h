@@ -28,7 +28,7 @@ static inline void print_eigen_quat(const char* label, const Eigen::Quaterniond&
     vl_info("%s: %f %f %f %f", label, in.w(), in.x(), in.y(), in.z());
 }
 
-static inline double vector_get_angle(const Eigen::Vector3d& me, const Eigen::Vector3d& vec) {
+static inline double get_angle_between_vectors(const Eigen::Vector3d& me, const Eigen::Vector3d& vec) {
     double lengths = me.norm() * vec.norm();
     if (lengths == 0)
         return 0;
