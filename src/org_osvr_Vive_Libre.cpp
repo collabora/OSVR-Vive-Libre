@@ -34,18 +34,10 @@
 
 #include "org_osvr_Vive_Libre_json.h"
 #include "vl_driver.h"
-#include "vl_math.h"
 
-
-#include <osvr/Util/EigenCoreGeometry.h>
 #include <osvr/Util/EigenInterop.h>
-#include <osvr/Util/TimeValue.h>
-
-
-namespace ei = osvr::util::eigen_interop;
 
 static const auto PREFIX = "[vive-libre] ";
-
 
 void vl_print(std::string s) {
     std::cout << PREFIX << s << std::endl;
