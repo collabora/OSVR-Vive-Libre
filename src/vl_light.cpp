@@ -331,6 +331,11 @@ std::tuple<double, vl_light_sample_group, int, vl_light_sample_group> update_pul
 
 
 int find_max_seq(const std::vector<vl_light_sample_group>& sweeps) {
+    if (!sweeps.size()) {
+        vl_error("error: Sweep vector empty.");
+        return 0;
+    }
+
     std::vector<int> seqs;
     for (auto g : sweeps) {
         seqs.push_back(g.seq);
