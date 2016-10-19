@@ -177,9 +177,7 @@ static void dump_station_angle_from_csv(const std::string& file_path) {
 static void pnp_from_csv(const std::string& file_path) {
 
     // XXX
-    //std::string config(vl_get_config(driver->hmd_lighthouse_device, 0));
-    std::string config = "";
-
+    std::string config(vl_get_config(driver->hmd_lighthouse_device, 0));
     //vl_info("\n\nconfig:\n\n%s\n\n", config.c_str());
 
     std::stringstream foo;
