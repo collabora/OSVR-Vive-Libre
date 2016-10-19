@@ -522,7 +522,7 @@ void vl_driver::_update_pose(const vive_headset_imu_report &pkt) {
     }
 }
 
-void vl_driver_update_pose(unsigned char *buffer, int size, vl_driver* driver) {
+void vl_driver_update_pose(uint8_t* buffer, int size, vl_driver* driver) {
     vl_report_id report_id = static_cast<vl_report_id>(buffer[0]);
 
     if (size != 52) {
