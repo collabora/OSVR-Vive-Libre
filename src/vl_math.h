@@ -34,11 +34,3 @@ static inline double get_angle_between_vectors(const Eigen::Vector3d& me, const 
         return 0;
     return acos(me.dot(vec) / lengths);
 }
-
-static inline Eigen::Quaterniond* quat_init_axis(const Eigen::Vector3d& vec, double angle) {
-    return new Eigen::Quaterniond(
-                cos(angle / 2.0f),
-                vec.x() * sin(angle / 2.0f),
-                vec.y() * sin(angle / 2.0f),
-                vec.z() * sin(angle / 2.0f));
-}

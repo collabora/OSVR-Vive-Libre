@@ -92,7 +92,7 @@ Eigen::Quaterniond* vl_fusion::correct_gravity(const Eigen::Vector3d& accelerati
         }
 
         // perform the correction
-        return quat_init_axis(this->grav_error_axis, use_angle);
+        return new Eigen::Quaterniond(Eigen::AngleAxisd(use_angle, grav_error_axis));
     }
 
     return nullptr;
