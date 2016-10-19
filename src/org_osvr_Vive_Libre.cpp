@@ -96,7 +96,7 @@ class TrackerDevice {
         vive->poll();
 
         if (vive->previous_ticks != 0)
-            osvr::util::toQuat (*vive->sensor_fusion->orientation, pose.rotation);
+            osvr::util::toQuat (vive->sensor_fusion->orientation, pose.rotation);
 
         // Push pose to OSVR
         osvrDeviceTrackerSendPose(m_dev, m_tracker, &pose, 0);

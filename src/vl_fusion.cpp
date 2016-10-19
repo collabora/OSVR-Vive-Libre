@@ -31,7 +31,7 @@
 #include "vl_math.h"
 
 vl_fusion::vl_fusion() {
-    orientation =  std::make_unique<Eigen::Quaterniond>(Eigen::Quaterniond(1,0,0,0));
+    orientation =  Eigen::Quaterniond(1,0,0,0);
     fq_acceleration = std::make_unique<vl_filter_queue>(20);
     fq_angular_velocity = std::make_unique<vl_filter_queue>(20);
     grav_gain = 0.05f;
@@ -121,7 +121,7 @@ void vl_fusion::update(float dt, const Eigen::Vector3d& angular_velocity, const 
 {
     mutex_fusion_update.lock();
 
-    Eigen::Vector3d acceleration_world = *orientation * acceleration;
+    Eigen::Vector3d acceleration_world = orientation * acceleration;
 
     iterations += 1;
 
@@ -133,19 +133,19 @@ void vl_fusion::update(float dt, const Eigen::Vector3d& angular_velocity, const 
     if (ang_vel_length > 0.0001f) {
         Eigen::Vector3d rot_axis = angular_velocity.normalized();
         float rot_angle = ang_vel_length * dt;
-        *orientation *=  Eigen::Quaterniond(Eigen::AngleAxisd(rot_angle, rot_axis));
+        orientation *=  Eigen::Quaterniond(Eigen::AngleAxisd(rot_angle, rot_axis));
     }
 
     // gravity correction
     Eigen::Quaterniond* correction = correct_gravity(acceleration, ang_vel_length);
     if (correction != nullptr) {
-        *orientation = *correction * *orientation;
+        orientation = *correction * orientation;
         delete(correction);
     }
 
     // mitigate drift due to floating point
     // inprecision with quat multiplication.
-    orientation->normalize();
+    orientation.normalize();
 
     // print_eigen_quat("pose", *orientation);
     mutex_fusion_update.unlock();

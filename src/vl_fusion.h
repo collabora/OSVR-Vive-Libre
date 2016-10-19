@@ -67,7 +67,7 @@ private:
     Eigen::Quaterniond* correct_gravity(const Eigen::Vector3d& acceleration, float ang_vel_length);
 
 public:
-    std::unique_ptr<Eigen::Quaterniond> orientation = nullptr;
+    Eigen::Quaterniond orientation;
 
     vl_fusion();
     ~vl_fusion() = default;
