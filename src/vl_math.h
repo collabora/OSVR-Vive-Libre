@@ -24,16 +24,6 @@
 #include <Eigen/Geometry>
 #include "vl_log.h"
 
-static inline Eigen::Quaterniond switch_coord_order(const Eigen::Quaterniond& in) {
-    Eigen::Quaterniond q(in.x(), in.y(), in.z(), in.w());
-    return q;
-}
-
-static inline Eigen::Quaterniond eigen_quaternion_inverse_handedness(const Eigen::Quaterniond& in) {
-    Eigen::Quaterniond q(in.w(), -in.x(), -in.y(), -in.z());
-    return q;
-}
-
 static inline void print_eigen_quat(const char* label, const Eigen::Quaterniond& in) {
     vl_info("%s: %f %f %f %f", label, in.w(), in.x(), in.y(), in.z());
 }

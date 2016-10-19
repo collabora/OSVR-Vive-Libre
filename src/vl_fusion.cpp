@@ -31,8 +31,7 @@
 #include "vl_math.h"
 
 vl_fusion::vl_fusion() {
-    orientation = std::make_unique<Eigen::Quaterniond>(Eigen::AngleAxisd(0.5*M_PI, Eigen::Vector3d::UnitY()) * Eigen::Quaterniond(0, -1, 0, 0));
-
+    orientation =  std::make_unique<Eigen::Quaterniond>(Eigen::Quaterniond(1,0,0,0));
     fq_acceleration = std::make_unique<vl_filter_queue>(20);
     fq_angular_velocity = std::make_unique<vl_filter_queue>(20);
     grav_gain = 0.05f;
@@ -133,9 +132,8 @@ void vl_fusion::update(float dt, const Eigen::Vector3d& angular_velocity, const 
 
     if (ang_vel_length > 0.0001f) {
         Eigen::Vector3d rot_axis = angular_velocity.normalized();
-        //Eigen::Vector3d rot_axis = -angular_velocity.normalized();
         float rot_angle = ang_vel_length * dt;
-        *orientation = *orientation * Eigen::AngleAxisd(rot_angle, rot_axis);
+        *orientation *=  Eigen::Quaterniond(Eigen::AngleAxisd(rot_angle, rot_axis));
     }
 
     // gravity correction

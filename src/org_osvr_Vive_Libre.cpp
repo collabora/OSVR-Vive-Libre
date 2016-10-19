@@ -95,19 +95,10 @@ class TrackerDevice {
 
         vive->poll();
 
-        if (vive->previous_ticks != 0) {
-            const Eigen::Quaterniond& pose_vl = *vive->sensor_fusion->orientation;
+        if (vive->previous_ticks != 0)
+            osvr::util::toQuat (*vive->sensor_fusion->orientation, pose.rotation);
 
-            //Fix transformation
-            Eigen::AngleAxisd rotation_fix(0.5*M_PI, Eigen::Vector3d::UnitY());
-            Eigen::Quaterniond q = rotation_fix * switch_coord_order(pose_vl);
-            //Eigen::Quaterniond q = switch_coord_order(pose_vl);
-            Eigen::Quaterniond inv = eigen_quaternion_inverse_handedness(q);
-
-            // Push pose to OSVR
-            osvr::util::toQuat (inv, pose.rotation);
-        }
-
+        // Push pose to OSVR
         osvrDeviceTrackerSendPose(m_dev, m_tracker, &pose, 0);
 
         return OSVR_RETURN_SUCCESS;

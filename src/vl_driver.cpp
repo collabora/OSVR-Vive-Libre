@@ -236,13 +236,13 @@ bool vl_driver::open_devices(int idx)
 
 static Eigen::Vector3d vec3_from_accel(const __s16* smp)
 {
-    Eigen::Vector3d sample(smp[0], smp[1], smp[2]);
+    Eigen::Vector3d sample(smp[0], -smp[1], -smp[2]);
     return sample * VL_ACCEL_FACTOR;
 }
 
 static Eigen::Vector3d vec3_from_gyro(const __s16* smp)
 {
-    Eigen::Vector3d sample(smp[0], smp[1], smp[2]);
+    Eigen::Vector3d sample(smp[0], -smp[1], -smp[2]);
     return sample * VL_POW_2_M12; // 8/32768 = 2^-12
 }
 
